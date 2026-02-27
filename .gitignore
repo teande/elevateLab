@@ -1,3 +1,9 @@
+# Local python and vscode directories
+.vscode
+.DS_*
+.venv
+__pycache__
+
 # Local .terraform directories
 .terraform/
 
