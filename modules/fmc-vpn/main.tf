@@ -1,0 +1,71 @@
+terraform {
+  required_providers {
+    fmc = {
+      source  = "CiscoDevNet/fmc"
+      version = "2.0.0-rc4"
+    }
+  }
+}
+
+################################################################################################
+# VPN Site-to-Site Tunnels
+################################################################################################
+
+# SecureAccess VPN Site-to-Site Tunnel
+resource "fmc_vpn_s2s" "secure_access" {
+  name             = "SecureAccess"
+  route_based      = true
+  network_topology = "POINT_TO_POINT"
+  ikev1            = false
+  ikev2            = true
+}
+
+################################################################################################
+# IKEv2 Settings
+################################################################################################
+
+resource "fmc_vpn_s2s_ike_settings" "ike_settings" {
+  vpn_s2s_id                             = fmc_vpn_s2s.secure_access.id
+  ikev2_authentication_type              = "MANUAL_PRE_SHARED_KEY"
+  ikev2_manual_pre_shared_key            = "Cisco@123"
+  ikev2_enforce_hex_based_pre_shared_key = false
+
+  depends_on = [fmc_vpn_s2s.secure_access]
+}
+
+################################################################################################
+# VPN S2S Endpoints
+################################################################################################
+
+resource "fmc_vpn_s2s_endpoints" "endpoints" {
+  vpn_s2s_id = fmc_vpn_s2s.secure_access.id
+
+  items = {
+    # Node A - Internal FTD device
+    internal_node = {
+      peer_type                   = "PEER"
+      extranet_device             = false
+      device_id                   = var.devices[0].id
+      interface_id                = var.vti_interfaces.vti_1.id
+      connection_type             = "BIDIRECTIONAL"
+      allow_incoming_ikev2_routes = true
+    }
+
+    # Node B - Extranet SecureAccess cloud device
+    SecureAccess_Node = {
+      peer_type                   = "PEER"
+      extranet_device             = true
+      extranet_dynamic_ip         = false
+      extranet_ip_address         = "1.1.1.1"
+      connection_type             = "BIDIRECTIONAL"
+      allow_incoming_ikev2_routes = true
+    }
+  }
+
+  depends_on = [
+    fmc_vpn_s2s.secure_access,
+    fmc_vpn_s2s_ike_settings.ike_settings,
+    var.devices,
+    var.vti_interfaces
+  ]
+}
