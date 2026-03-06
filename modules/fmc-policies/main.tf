@@ -29,21 +29,22 @@ resource "fmc_policy_assignment" "access_policy_assignments" {
   ]
 }
 
-resource "fmc_policy_assignment" "dc_nat_policy" {
-  policy_id   = var.nat_policy.id
-  policy_type = "FTDNatPolicy"
-  targets = [
-    {
-      id   = var.devices[0].id
-      type = "Device"
-    }
-  ]
-
-  depends_on = [
-    var.devices,
-    var.nat_policy
-  ]
-}
+# NAT policy not present in base tenant being replicated
+# resource "fmc_policy_assignment" "dc_nat_policy" {
+#   policy_id   = var.nat_policy.id
+#   policy_type = "FTDNatPolicy"
+#   targets = [
+#     {
+#       id   = var.devices[0].id
+#       type = "Device"
+#     }
+#   ]
+#
+#   depends_on = [
+#     var.devices,
+#     var.nat_policy
+#   ]
+# }
 
 resource "null_resource" "platform_policy_assignment" {
   count = length(var.ftd_ips)

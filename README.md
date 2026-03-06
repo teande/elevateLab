@@ -56,7 +56,7 @@ scc_host   = "https://us.manage.security.cisco.com"  # or your region
 cdfmc_host = "your-cdfmc-hostname.cisco.com"
 
 # Pre-configured (don't change unless needed)
-ftd_ips     = ["198.18.133.30"]
+ftd_ips     = ["198.18.133.39"]
 device_name = ["HQ_FTDv"]
 policies    = ["HQ Firewall Policy"]
 ```
@@ -305,10 +305,10 @@ DCtoMCD: Multi-cloud defense
 #### Device Onboarding Failures
 ```bash
 # Check device connectivity
-ping 198.18.133.30
+ping 198.18.133.39
 
 # Verify SSH access
-ssh admin@198.18.133.30
+ssh admin@198.18.133.39
 
 # Review onboarding logs
 terraform apply -target=module.fmc_devices

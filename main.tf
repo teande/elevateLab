@@ -95,7 +95,8 @@ module "fmc_policies" {
   # Data from previous modules
   devices         = module.fmc_devices.devices
   access_policies = module.fmc_devices.access_policies
-  nat_policy      = module.fmc_devices.nat_policy
+  # nat_policy not present in base tenant being replicated
+  # nat_policy      = module.fmc_devices.nat_policy
   device_names    = var.device_name
   ftd_ips         = var.ftd_ips
   cdfmc_host      = var.cdfmc_host

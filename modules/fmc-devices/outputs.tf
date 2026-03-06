@@ -15,9 +15,8 @@ output "security_zones" {
     DMZ          = data.fmc_security_zone.DMZ
     INTERNET     = data.fmc_security_zone.INTERNET
     DATA_CENTER  = data.fmc_security_zone.DATA-CENTER
-    APPS         = data.fmc_security_zone.APPS
     SecureAccess = data.fmc_security_zone.SecureAccess
-    TUNNEL_ZONE  = data.fmc_security_zone.TUNNEL_ZONE
+    # APPS and TUNNEL_ZONE are not present in base tenant — commented out
   }
 }
 
@@ -26,7 +25,8 @@ output "access_policies" {
   value       = data.fmc_access_control_policy.fmc_access_policy
 }
 
-output "nat_policy" {
-  description = "NAT policy"
-  value       = data.fmc_ftd_nat_policy.dc_firewall_nat_policy
-}
+# NAT policy not present in base tenant being replicated
+# output "nat_policy" {
+#   description = "NAT policy"
+#   value       = data.fmc_ftd_nat_policy.dc_firewall_nat_policy
+# }

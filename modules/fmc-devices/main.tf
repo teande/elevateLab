@@ -10,6 +10,19 @@ terraform {
   }
 }
 
+################################################################################################
+# Security Zones — not present in base tenant being replicated; commented out until confirmed needed
+################################################################################################
+# resource "fmc_security_zone" "APPS" {
+#   name           = "APPS"
+#   interface_mode = "ROUTED"
+# }
+
+# resource "fmc_security_zone" "TUNNEL_ZONE" {
+#   name           = "TUNNEL-ZONE"
+#   interface_mode = "ROUTED"
+# }
+
 ################################################################################
 # Import the configurations
 ################################################################################
@@ -22,7 +35,9 @@ resource "null_resource" "install_requirements_for_import" {
 }
 
 resource "null_resource" "import_firewall_config" {
-  depends_on = [null_resource.install_requirements_for_import]
+  depends_on = [
+    null_resource.install_requirements_for_import
+  ]
   provisioner "local-exec" {
     command     = ".venv/bin/python3 main.py --host https://${var.cdfmc_host} --token ${var.scc_token} --backup-file automation.sfo"
     working_dir = "${path.root}/scripts/config-import"
@@ -58,25 +73,15 @@ data "fmc_security_zone" "DATA-CENTER" {
   name       = "DATA-CENTER"
 }
 
-data "fmc_security_zone" "APPS" {
-  depends_on = [time_sleep.wait_for_import]
-  name       = "APPS"
-}
-
 data "fmc_security_zone" "SecureAccess" {
   depends_on = [time_sleep.wait_for_import]
   name       = "SecureAccess"
 }
 
-data "fmc_security_zone" "TUNNEL_ZONE" {
-  depends_on = [time_sleep.wait_for_import]
-  name       = "TUNNEL-ZONE"
-}
-
-data "fmc_ftd_nat_policy" "dc_firewall_nat_policy" {
-  depends_on = [time_sleep.wait_for_import]
-  name       = "HQ NAT Policy"
-}
+# data "fmc_ftd_nat_policy" "dc_firewall_nat_policy" {
+#   depends_on = [time_sleep.wait_for_import]
+#   name       = "HQ NAT Policy"
+# }
 
 ################################################################################
 # Device Onboarding
