@@ -24,7 +24,7 @@ resource "null_resource" "install_requirements_for_import" {
 resource "null_resource" "import_firewall_config" {
   depends_on = [null_resource.install_requirements_for_import]
   provisioner "local-exec" {
-    command     = ".venv/bin/python3 main.py --host https://${var.cdfmc_host} --token ${var.scc_token} --backup-file automation_backup.sfo"
+    command     = ".venv/bin/python3 main.py --host https://${var.cdfmc_host} --token ${var.scc_token} --backup-file automation.sfo"
     working_dir = "${path.root}/scripts/config-import"
     interpreter = ["/bin/bash", "-c"]
   }
