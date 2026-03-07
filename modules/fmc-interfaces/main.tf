@@ -31,7 +31,7 @@ resource "fmc_device_physical_interface" "dc_g0_0" {
   enabled                  = true
   security_zone_id         = var.security_zones.WAN.id
   ipv4_static_address      = "198.18.8.1"
-  ipv4_static_netmask      = "24"
+  ipv4_static_netmask      = "31"
   enable_sgt_propagate     = true
   ip_based_monitoring      = true
   ip_based_monitoring_type = "AUTO"
@@ -115,7 +115,7 @@ resource "fmc_device_physical_interface" "dc_g0_4" {
   enabled              = true
   security_zone_id     = var.security_zones.WAN.id
   ipv4_static_address  = "198.18.8.3"
-  ipv4_static_netmask  = "24"
+  ipv4_static_netmask  = "31"
   enable_sgt_propagate = false
   ip_based_monitoring  = false
 
@@ -135,7 +135,7 @@ resource "fmc_device_physical_interface" "dc_g0_5" {
   enabled              = true
   security_zone_id     = var.security_zones.WAN.id
   ipv4_static_address  = "198.18.8.5"
-  ipv4_static_netmask  = "24"
+  ipv4_static_netmask  = "31"
   enable_sgt_propagate = false
   ip_based_monitoring  = false
 
