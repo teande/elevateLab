@@ -129,7 +129,10 @@ module "fmc_bgp" {
   cdfmc_host  = var.cdfmc_host
   scc_token   = var.scc_token
   devices     = module.fmc_devices.devices
-  network_ids = module.fmc_network_objects.network_object_ids
+  network_ids = {
+    # BGP script expects FMC object name as the key, not the Terraform output key (data_center_id)
+    "Data-Center" = module.fmc_network_objects.network_object_ids.data_center_id
+  }
 }
 
 # Configure VPN Site-to-Site (ALWAYS RUNS LAST)
