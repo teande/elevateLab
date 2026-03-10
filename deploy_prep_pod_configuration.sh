@@ -118,40 +118,38 @@ echo "VTI1 ID (Tunnel1): $VTI1_ID"
 echo "VTI2 ID (Tunnel2): $VTI2_ID"
 echo "NetFlow Group ID: $NETFLOW_ID"
 
-# Step 4: Import VTI interfaces into state (with smart checking)
-if check_step_completed "vti_imports"; then
-    echo "Step 4: VTI imports already completed (cached) ⚡"
-else
-    echo "Step 4: Importing VTI interfaces into Terraform state..."
-
-    import_vti() {
-        local resource_name=$1
-        local vti_id=$2
-        local description=$3
-        
-        # Fast check: if resource already exists in state, skip
-        if resource_exists_in_state "$resource_name"; then
-            echo "⚡ $description already in state (skipping)"
-            return 0
-        fi
-        
-        if [ -n "$vti_id" ] && [ "$vti_id" != "null" ]; then
-            echo "Importing $description..."
-            if terraform import "$resource_name" "$DEVICE_ID,$vti_id"; then
-                echo "✅ Successfully imported $description"
-            else
-                echo "⚠️  Import failed for $description (may already be imported)"
-            fi
-        else
-            echo "❌ Skipping $description - ID not found"
-        fi
-    }
-
-    import_vti "module.fmc_interfaces.fmc_device_vti_interface.WAN_static_vti_1" "$VTI1_ID" "WAN Static VTI 1 (Tunnel1)"
-    import_vti "module.fmc_interfaces.fmc_device_vti_interface.WAN_static_vti_2" "$VTI2_ID" "WAN Static VTI 2 (Tunnel2)"
-
-    mark_step_completed "vti_imports"
+# Validate critical IDs before attempting imports
+if [ -z "$VTI1_ID" ] || [ -z "$VTI2_ID" ]; then
+    echo "ERROR: VTI IDs could not be determined. Delete .pod_prepare_progress and .vti_ids_cache and re-run."
+    exit 1
 fi
+
+# Step 4: Import VTI interfaces into state (always runs — resource_exists_in_state handles idempotency)
+echo "Step 4: Importing VTI interfaces into Terraform state..."
+
+import_vti() {
+    local resource_name=$1
+    local vti_id=$2
+    local description=$3
+
+    # Fast check: if resource already exists in state, skip
+    if resource_exists_in_state "$resource_name"; then
+        echo "⚡ $description already in state (skipping)"
+        return 0
+    fi
+
+    echo "Importing $description..."
+    if terraform import "$resource_name" "$DEVICE_ID,$vti_id"; then
+        echo "✅ Successfully imported $description"
+    else
+        echo "ERROR: ❌ Import failed for $description (DEVICE_ID=$DEVICE_ID, VTI_ID=$vti_id)"
+        echo "       Ensure the device is registered and VTI interfaces exist on the FTD."
+        exit 1
+    fi
+}
+
+import_vti "module.fmc_interfaces.fmc_device_vti_interface.WAN_static_vti_1" "$VTI1_ID" "WAN Static VTI 1 (Tunnel1)"
+import_vti "module.fmc_interfaces.fmc_device_vti_interface.WAN_static_vti_2" "$VTI2_ID" "WAN Static VTI 2 (Tunnel2)"
 
 # Step 5: Import NetFlowGrp interface group (with smart checking)
 if check_step_completed "netflow_import"; then

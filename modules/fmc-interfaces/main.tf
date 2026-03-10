@@ -177,7 +177,7 @@ resource "fmc_device_vti_interface" "WAN_static_vti_1" {
   logical_name                      = "WAN_static_vti_1"
   enabled                           = true
   description                       = "WAN Static VTI 1"
-  # security_zone_id not set — TUNNEL-ZONE not present in base tenant
+  security_zone_id                  = var.security_zones.SecureAccess.id
   priority                          = 0
   tunnel_id                         = 1
   tunnel_source_interface_id        = fmc_device_physical_interface.dc_g0_2.id
@@ -201,7 +201,7 @@ resource "fmc_device_vti_interface" "WAN_static_vti_2" {
   logical_name                      = "WAN_static_vti_2"
   enabled                           = true
   description                       = "WAN Static VTI 2"
-  # security_zone_id not set — TUNNEL-ZONE not present in base tenant
+  security_zone_id                  = var.security_zones.SecureAccess.id
   priority                          = 0
   tunnel_id                         = 2
   tunnel_source_interface_id        = fmc_device_physical_interface.dc_g0_2.id

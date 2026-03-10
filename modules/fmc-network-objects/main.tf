@@ -11,14 +11,10 @@ terraform {
 # Network Objects for OSPF Configuration
 ################################################################################################
 
-# resource "fmc_network" "apps" {
-#   name        = "Apps"
-#   prefix      = "198.18.11.0/24"
-#   description = "Applications network segment"
-# }
-
-data "fmc_network" "apps" {
-  name = "Apps"
+resource "fmc_network" "apps" {
+  name        = "Apps"
+  prefix      = "198.18.11.0/24"
+  description = "Applications network segment"
 }
 
 resource "fmc_network" "attacker" {
