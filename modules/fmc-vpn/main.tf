@@ -43,25 +43,25 @@ resource "fmc_vpn_s2s_endpoints" "endpoints" {
   items = {
     # Node A - Internal FTD device
     internal_node = {
-      peer_type                   = "PEER"
-      extranet_device             = false
-      device_id                   = var.devices[0].id
-      interface_id                = var.vti_interfaces.vti_1.id
-      local_identity_type         = "EMAILID"
-      local_identity_string       = "me@cisco.com"
-      backup_interface_id         = var.vti_interfaces.vti_2.id
-      backup_local_identity_type  = "EMAILID"
-      backup_local_identity_string = "me@cisco.com"
-      connection_type             = "BIDIRECTIONAL"
-      allow_incoming_ikev2_routes = true
+      peer_type                    = "PEER"
+      extranet_device              = false
+      device_id                    = var.devices[0].id
+      interface_id                 = var.vti_interfaces.vti_1.id
+      local_identity_type          = "EMAILID"
+      local_identity_string        = "change_me@cisco.com"
+      backup_interface_id          = var.vti_interfaces.vti_2.id
+      backup_local_identity_type   = "EMAILID"
+      backup_local_identity_string = "change_me@cisco.com"
+      connection_type              = "BIDIRECTIONAL"
+      allow_incoming_ikev2_routes  = true
     }
 
     # Node B - Extranet SecureAccess cloud device
-    SecureAccess_Node = {
+    SecureAccess = {
       peer_type                   = "PEER"
       extranet_device             = true
       extranet_dynamic_ip         = false
-      extranet_ip_address         = "1.1.1.1"
+      extranet_ip_address         = "44.217.195.188,35.171.214.188"
       connection_type             = "BIDIRECTIONAL"
       allow_incoming_ikev2_routes = true
     }
