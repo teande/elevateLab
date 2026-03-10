@@ -151,29 +151,23 @@ import_vti() {
 import_vti "module.fmc_interfaces.fmc_device_vti_interface.WAN_static_vti_1" "$VTI1_ID" "WAN Static VTI 1 (Tunnel1)"
 import_vti "module.fmc_interfaces.fmc_device_vti_interface.WAN_static_vti_2" "$VTI2_ID" "WAN Static VTI 2 (Tunnel2)"
 
-# Step 5: Import NetFlowGrp interface group (with smart checking)
-if check_step_completed "netflow_import"; then
-    echo "Step 5: NetFlowGrp import already completed (cached) ⚡"
+# Step 5: Import NetFlowGrp interface group (always runs — resource_exists_in_state handles idempotency)
+echo "Step 5: Importing NetFlowGrp interface group into Terraform state..."
+
+# Check if NetFlowGrp resource already exists in state
+if resource_exists_in_state "module.fmc_interface_groups.fmc_interface_group.netflow_managed"; then
+    echo "⚡ NetFlowGrp already in state (skipping)"
+elif [ -z "$NETFLOW_ID" ] || [ "$NETFLOW_ID" = "null" ]; then
+    echo "ℹ️  NetFlowGrp ID not found on tenant — will be created fresh by Step 6"
 else
-    echo "Step 5: Importing NetFlowGrp interface group into Terraform state..."
-
-    # Check if NetFlowGrp resource already exists in state
-    if resource_exists_in_state "module.fmc_interface_groups.fmc_interface_group.netflow_managed"; then
-        echo "⚡ NetFlowGrp already in state (skipping)"
+    echo "Importing NetFlowGrp interface group..."
+    if terraform import "module.fmc_interface_groups.fmc_interface_group.netflow_managed" "$NETFLOW_ID"; then
+        echo "✅ Successfully imported NetFlowGrp interface group"
     else
-        if [ -n "$NETFLOW_ID" ] && [ "$NETFLOW_ID" != "null" ]; then
-            echo "Importing NetFlowGrp interface group..."
-            if terraform import "module.fmc_interface_groups.fmc_interface_group.netflow_managed" "$NETFLOW_ID"; then
-                echo "✅ Successfully imported NetFlowGrp interface group"
-            else
-                echo "⚠️  Import failed for NetFlowGrp (may already be imported)"
-            fi
-        else
-            echo "❌ Skipping NetFlowGrp import - ID not found"
-        fi
+        echo "ERROR: ❌ Import failed for NetFlowGrp (NETFLOW_ID=$NETFLOW_ID)"
+        echo "       Check API connectivity and that the interface group exists on the tenant."
+        exit 1
     fi
-
-    mark_step_completed "netflow_import"
 fi
 
 # Step 6: Apply the core configuration excluding VPN module (with smart checking)
