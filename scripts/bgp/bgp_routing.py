@@ -170,11 +170,11 @@ def build_bgp_payload(obj_map, bgp_id=None):
                     "type": "neighboradvanced",
                     "neighborHops": {
                         "type": "neighborebgpmultihop",
-                        "maxHopCount": 1,
+                        "maxHopCount": 254,
                         "disableConnectedCheck": False,
                     },
                     "neighborVersion": 0,
-                    "nextHopSelf": False,
+                    "nextHopSelf": True,
                     "neighborWeight": 0,
                     "sendCommunity": False,
                     "neighborTransportConnectionMode": {

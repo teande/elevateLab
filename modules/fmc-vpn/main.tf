@@ -47,6 +47,11 @@ resource "fmc_vpn_s2s_endpoints" "endpoints" {
       extranet_device             = false
       device_id                   = var.devices[0].id
       interface_id                = var.vti_interfaces.vti_1.id
+      local_identity_type         = "EMAILID"
+      local_identity_string       = "me@cisco.com"
+      backup_interface_id         = var.vti_interfaces.vti_2.id
+      backup_local_identity_type  = "EMAILID"
+      backup_local_identity_string = "me@cisco.com"
       connection_type             = "BIDIRECTIONAL"
       allow_incoming_ikev2_routes = true
     }
