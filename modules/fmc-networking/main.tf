@@ -18,13 +18,11 @@ data "fmc_network" "any-ipv4" {
   name = "any-ipv4"
 }
 
-data "fmc_host" "ExtGW" {
-  depends_on = [
-    var.wait_for_onboarding,
-    var.devices,
-    var.physical_interfaces
-  ]
+# ExtGW: created as a resource since static routes are never imported.
+# If NAT policy is later imported via .sfo, this should become a data source.
+resource "fmc_host" "ExtGW" {
   name = "ExtGW"
+  ip   = "198.18.3.1"
 }
 
 ################################################################################################
@@ -62,33 +60,28 @@ resource "fmc_network" "Branch-EVPN-Overlay-IOT" {
 # Host Object Resources
 ################################################################################################
 resource "fmc_host" "En-Cat8Kv" {
-  depends_on = [data.fmc_host.ExtGW]
-  name       = "En-Cat8Kv"
-  ip         = "198.18.8.1"
+  name = "En-Cat8Kv"
+  ip   = "198.18.8.1"
 }
 
 resource "fmc_host" "BRANCH-SITE-105-ROUTER" {
-  depends_on = [data.fmc_host.ExtGW]
-  name       = "BRANCH-SITE-105-ROUTER"
-  ip         = "100.100.10.105"
+  name = "BRANCH-SITE-105-ROUTER"
+  ip   = "100.100.10.105"
 }
 
 resource "fmc_host" "HQ-SITE10-CEDGE8Kv" {
-  depends_on = [data.fmc_host.ExtGW]
-  name       = "HQ-SITE10-CEDGE8Kv"
-  ip         = "100.100.10.10"
+  name = "HQ-SITE10-CEDGE8Kv"
+  ip   = "100.100.10.10"
 }
 
 resource "fmc_host" "Secure_Access_BGP_Peer_1" {
-  depends_on = [data.fmc_host.ExtGW]
-  name       = "Secure_Access_BGP_Peer_1"
-  ip         = "169.254.0.5"
+  name = "Secure_Access_BGP_Peer_1"
+  ip   = "169.254.0.5"
 }
 
 resource "fmc_host" "Secure_Access_BGP_Peer_2" {
-  depends_on = [data.fmc_host.ExtGW]
-  name       = "Secure_Access_BGP_Peer_2"
-  ip         = "169.254.0.9"
+  name = "Secure_Access_BGP_Peer_2"
+  ip   = "169.254.0.9"
 }
 
 ################################################################################################
@@ -103,12 +96,12 @@ resource "fmc_device_ipv4_static_route" "route_to_internet" {
   destination_networks = [{
     id = data.fmc_network.any-ipv4.id
   }]
-  gateway_host_object_id = data.fmc_host.ExtGW.id
+  gateway_host_object_id = fmc_host.ExtGW.id
 
   depends_on = [
     var.devices,
     var.physical_interfaces,
-    data.fmc_host.ExtGW
+    fmc_host.ExtGW
   ]
 }
 

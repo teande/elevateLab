@@ -103,7 +103,7 @@ module "fmc_policies" {
   scc_token       = var.scc_token
 }
 
-# Configure OSPF (runs after policies but before VPN)
+# Configure OSPF (runs after policies but before BGP and VPN)
 module "fmc_ospf" {
   source = "./modules/fmc-ospf"
 
@@ -118,12 +118,26 @@ module "fmc_ospf" {
   network_ids = module.fmc_network_objects.network_object_ids
 }
 
+# Configure BGP (runs after OSPF, before VPN)
+module "fmc_bgp" {
+  source = "./modules/fmc-bgp"
+
+  # Dependencies - BGP runs after OSPF
+  depends_on = [module.fmc_ospf]
+
+  # Configuration parameters
+  cdfmc_host  = var.cdfmc_host
+  scc_token   = var.scc_token
+  devices     = module.fmc_devices.devices
+  network_ids = module.fmc_network_objects.network_object_ids
+}
+
 # Configure VPN Site-to-Site (ALWAYS RUNS LAST)
 module "fmc_vpn" {
   source = "./modules/fmc-vpn"
 
-  # Dependencies - VPN runs last after OSPF is configured
-  depends_on = [module.fmc_ospf]
+  # Dependencies - VPN runs last after BGP is configured
+  depends_on = [module.fmc_bgp]
 
   # Data from previous modules
   devices        = module.fmc_devices.devices

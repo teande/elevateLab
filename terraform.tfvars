@@ -4,5 +4,5 @@ cdfmc_host = ""
 
 ## Preconfigured Variables. Please dont change these unless you know what you're doing.
 ftd_ips     = ["198.18.133.39"]
-device_name = ["HQ_FTDv"]
+device_name = ["hqftdv"]
 policies    = ["HQ Firewall Policy"]
