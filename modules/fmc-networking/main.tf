@@ -206,7 +206,7 @@ resource "fmc_device_ipv4_static_route" "route_to_secure_access_peer1" {
   destination_networks = [{
     id = fmc_host.Secure_Access_BGP_Peer_1.id
   }]
-  gateway_host_literal = "169.254.2.1"
+  gateway_host_literal = "169.254.6.1"
   metric_value         = 1
 
   depends_on = [
@@ -224,7 +224,7 @@ resource "fmc_device_ipv4_static_route" "route_to_secure_access_peer2" {
   destination_networks = [{
     id = fmc_host.Secure_Access_BGP_Peer_2.id
   }]
-  gateway_host_literal = "169.254.2.5"
+  gateway_host_literal = "169.254.6.5"
   metric_value         = 1
 
   depends_on = [
