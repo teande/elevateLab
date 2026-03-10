@@ -45,16 +45,16 @@ module "fmc_interface_groups" {
   # Dependencies - interfaces must be created first
   depends_on = [module.fmc_interfaces]
 
-  # Interface data for INSIDE_NETS group
-  inside_interfaces = [
-    { id = module.fmc_interfaces.created_interfaces.dc_g0_0.id },
-    { id = module.fmc_interfaces.created_interfaces.dc_g0_1.id },
-    { id = module.fmc_interfaces.created_interfaces.dc_g0_2.id },
-    { id = module.fmc_interfaces.created_interfaces.dc_g0_3.id },
-    { id = module.fmc_interfaces.created_interfaces.dc_g0_4.id },
-    { id = module.fmc_interfaces.created_interfaces.dc_g0_5.id },
-    { id = module.fmc_interfaces.created_interfaces.dc_g0_6.id }
-  ]
+  # Interface data for INSIDE_NETS group — commented out, not required in new lab tenant
+  # inside_interfaces = [
+  #   { id = module.fmc_interfaces.created_interfaces.dc_g0_0.id },
+  #   { id = module.fmc_interfaces.created_interfaces.dc_g0_1.id },
+  #   { id = module.fmc_interfaces.created_interfaces.dc_g0_2.id },
+  #   { id = module.fmc_interfaces.created_interfaces.dc_g0_3.id },
+  #   { id = module.fmc_interfaces.created_interfaces.dc_g0_4.id },
+  #   { id = module.fmc_interfaces.created_interfaces.dc_g0_5.id },
+  #   { id = module.fmc_interfaces.created_interfaces.dc_g0_6.id }
+  # ]
 
   # Interface to add to NetFlowGrp (if managing it)
   netflow_interfaces = [{ id = module.fmc_interfaces.created_interfaces.dc_g0_3.id }]

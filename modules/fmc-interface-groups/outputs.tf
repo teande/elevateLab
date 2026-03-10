@@ -1,12 +1,13 @@
-output "inside_nets_group" {
-  description = "INSIDE_NETS interface group"
-  value       = fmc_interface_group.inside_nets
-}
-
-output "inside_nets_group_id" {
-  description = "INSIDE_NETS interface group ID"
-  value       = fmc_interface_group.inside_nets.id
-}
+# INSIDE_NETS outputs commented out — resource not created in new lab tenant
+# output "inside_nets_group" {
+#   description = "INSIDE_NETS interface group"
+#   value       = fmc_interface_group.inside_nets
+# }
+#
+# output "inside_nets_group_id" {
+#   description = "INSIDE_NETS interface group ID"
+#   value       = fmc_interface_group.inside_nets.id
+# }
 
 output "netflow_managed_group" {
   description = "Managed NetFlowGrp interface group"
