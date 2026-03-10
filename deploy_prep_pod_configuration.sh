@@ -193,9 +193,13 @@ else
     mark_step_completed "core_config"
 fi
 
-# Step 7: Apply OSPF configuration (before VPN)
+# Step 7a: Apply OSPF configuration (before BGP and VPN)
 echo "Step 7: Applying OSPF configuration..."
 terraform apply -target=module.fmc_ospf -auto-approve -refresh=false
+
+# Step 7b: Apply BGP configuration (after OSPF, before VPN)
+echo "Step 7b: Applying BGP configuration..."
+terraform apply -target=module.fmc_bgp -auto-approve -refresh=false
 
 # Step 8: Apply VPN configuration as final step (always last)
 echo "Step 8: Applying VPN configuration as final step..."
@@ -217,6 +221,7 @@ echo "✅ Security zones attached to VTI interfaces"
 echo "✅ Networking and network objects configured"
 echo "✅ Policies configured"
 echo "✅ OSPF configuration applied"
+echo "✅ BGP configuration applied"
 echo "✅ VPN configuration applied (final step)"
 echo "✅ Full infrastructure deployed"
 echo ""
