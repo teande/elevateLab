@@ -147,9 +147,3 @@ module "fmc_vpn" {
   vti_interfaces = module.fmc_vti_discovery.vti_interfaces
 }
 
-resource "fmc_device_deploy" "deploy" {
-  depends_on      = [module.fmc_vpn]
-  ignore_warning  = true
-  device_id_list  = [module.fmc_devices.devices[0].id]
-  deployment_note = "Terraform initiated deployment"
-}

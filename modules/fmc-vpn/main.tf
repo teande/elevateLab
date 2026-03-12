@@ -74,3 +74,11 @@ resource "fmc_vpn_s2s_endpoints" "endpoints" {
     var.vti_interfaces
   ]
 }
+
+
+resource "fmc_device_deploy" "deploy" {
+  depends_on      = [fmc_vpn_s2s_endpoints.endpoints]
+  ignore_warning  = true
+  device_id_list  = [var.devices[0].id]
+  deployment_note = "Terraform initiated deployment"
+}
