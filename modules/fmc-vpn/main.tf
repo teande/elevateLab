@@ -27,7 +27,7 @@ resource "fmc_vpn_s2s" "secure_access" {
 resource "fmc_vpn_s2s_ike_settings" "ike_settings" {
   vpn_s2s_id                             = fmc_vpn_s2s.secure_access.id
   ikev2_authentication_type              = "MANUAL_PRE_SHARED_KEY"
-  ikev2_manual_pre_shared_key            = "Cisco@123"
+  ikev2_manual_pre_shared_key            = "dCloud123!"
   ikev2_enforce_hex_based_pre_shared_key = false
 
   depends_on = [fmc_vpn_s2s.secure_access]

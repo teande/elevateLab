@@ -18,11 +18,6 @@ terraform {
 #   interface_mode = "ROUTED"
 # }
 
-# resource "fmc_security_zone" "TUNNEL_ZONE" {
-#   name           = "TUNNEL-ZONE"
-#   interface_mode = "ROUTED"
-# }
-
 ################################################################################
 # Import the configurations
 ################################################################################

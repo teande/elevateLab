@@ -18,11 +18,9 @@ data "fmc_network" "any-ipv4" {
   name = "any-ipv4"
 }
 
-# ExtGW: created as a resource since static routes are never imported.
-# If NAT policy is later imported via .sfo, this should become a data source.
-resource "fmc_host" "ExtGW" {
+# ExtGW: imported via .sfo — look up as data source
+data "fmc_host" "ExtGW" {
   name = "ExtGW"
-  ip   = "198.18.3.1"
 }
 
 ################################################################################################
@@ -96,12 +94,12 @@ resource "fmc_device_ipv4_static_route" "route_to_internet" {
   destination_networks = [{
     id = data.fmc_network.any-ipv4.id
   }]
-  gateway_host_object_id = fmc_host.ExtGW.id
+  gateway_host_object_id = data.fmc_host.ExtGW.id
 
   depends_on = [
     var.devices,
     var.physical_interfaces,
-    fmc_host.ExtGW
+    data.fmc_host.ExtGW
   ]
 }
 

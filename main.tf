@@ -97,10 +97,10 @@ module "fmc_policies" {
   access_policies = module.fmc_devices.access_policies
   # nat_policy not present in base tenant being replicated
   # nat_policy      = module.fmc_devices.nat_policy
-  device_names    = var.device_name
-  ftd_ips         = var.ftd_ips
-  cdfmc_host      = var.cdfmc_host
-  scc_token       = var.scc_token
+  device_names = var.device_name
+  ftd_ips      = var.ftd_ips
+  cdfmc_host   = var.cdfmc_host
+  scc_token    = var.scc_token
 }
 
 # Configure OSPF (runs after policies but before BGP and VPN)
@@ -126,9 +126,9 @@ module "fmc_bgp" {
   depends_on = [module.fmc_ospf]
 
   # Configuration parameters
-  cdfmc_host  = var.cdfmc_host
-  scc_token   = var.scc_token
-  devices     = module.fmc_devices.devices
+  cdfmc_host = var.cdfmc_host
+  scc_token  = var.scc_token
+  devices    = module.fmc_devices.devices
   network_ids = {
     # BGP script expects FMC object name as the key, not the Terraform output key (data_center_id)
     "Data-Center" = module.fmc_network_objects.network_object_ids.data_center_id
@@ -145,4 +145,11 @@ module "fmc_vpn" {
   # Data from previous modules
   devices        = module.fmc_devices.devices
   vti_interfaces = module.fmc_vti_discovery.vti_interfaces
+}
+
+resource "fmc_device_deploy" "deploy" {
+  depends_on      = [module.fmc_vpn]
+  ignore_warning  = true
+  device_id_list  = [module.fmc_devices.devices[0].id]
+  deployment_note = "Terraform initiated deployment"
 }
