@@ -556,5 +556,3 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 if __name__ == "__main__":
     app()
-if __name__ == "__main__":
-    app()
