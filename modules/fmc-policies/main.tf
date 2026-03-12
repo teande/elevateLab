@@ -54,7 +54,7 @@ resource "null_resource" "platform_policy_assignment" {
   }
 
   provisioner "local-exec" {
-    command     = ".venv/bin/python3 platsettings.py --host ${var.cdfmc_host} --token ${var.scc_token} --deviceid ${var.devices[count.index].id} --is_cdfmc 'true' --platformpolicy_name 'vFTD-platform-policy'"
+    command     = "../.venv/bin/python3 platsettings.py --host ${var.cdfmc_host} --token ${var.scc_token} --deviceid ${var.devices[count.index].id} --is_cdfmc 'true' --platformpolicy_name 'vFTD-platform-policy'"
     working_dir = "${path.module}/../../scripts/config-import"
     interpreter = ["/bin/bash", "-c"]
   }

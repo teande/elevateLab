@@ -13,19 +13,10 @@ terraform {
 # Runs after OSPF, before VPN
 ################################################################################################
 
-resource "null_resource" "install_requirements_for_bgp" {
-  provisioner "local-exec" {
-    working_dir = "${path.root}/scripts/bgp"
-    command     = "python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt"
-    interpreter = ["/bin/bash", "-c"]
-  }
-}
-
+# Requires shared venv at scripts/.venv (created by deploy_prep_pod_configuration.sh)
 resource "null_resource" "configure_bgp" {
-  depends_on = [null_resource.install_requirements_for_bgp]
-
   provisioner "local-exec" {
-    command     = ".venv/bin/python3 bgp_routing.py --fmc-url '${var.cdfmc_host}' --api-key '${var.scc_token}' --device-id '${var.devices[0].id}' --network-ids '${jsonencode(var.network_ids)}'"
+    command     = "../.venv/bin/python3 bgp_routing.py --fmc-url '${var.cdfmc_host}' --api-key '${var.scc_token}' --device-id '${var.devices[0].id}' --network-ids '${jsonencode(var.network_ids)}'"
     working_dir = "${path.root}/scripts/bgp"
     interpreter = ["/bin/bash", "-c"]
   }

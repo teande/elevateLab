@@ -26,20 +26,10 @@ terraform {
 ################################################################################
 # Import the configurations
 ################################################################################
-resource "null_resource" "install_requirements_for_import" {
-  provisioner "local-exec" {
-    working_dir = "${path.root}/scripts/config-import"
-    command     = "python3 -m venv .venv && source .venv/bin/activate && pip install requests shutup"
-    interpreter = ["/bin/bash", "-c"]
-  }
-}
-
+# Requires shared venv at scripts/.venv (created by deploy_prep_pod_configuration.sh)
 resource "null_resource" "import_firewall_config" {
-  depends_on = [
-    null_resource.install_requirements_for_import
-  ]
   provisioner "local-exec" {
-    command     = ".venv/bin/python3 main.py --host https://${var.cdfmc_host} --token ${var.scc_token} --backup-file automation.sfo"
+    command     = "../.venv/bin/python3 main.py --host https://${var.cdfmc_host} --token ${var.scc_token} --backup-file automation.sfo"
     working_dir = "${path.root}/scripts/config-import"
     interpreter = ["/bin/bash", "-c"]
   }
@@ -108,17 +98,8 @@ resource "cdo_ftd_device" "ngfw" {
   }
 }
 
-resource "null_resource" "install_requirements_for_onboarding" {
-  provisioner "local-exec" {
-    working_dir = "${path.root}/scripts/device-onboarding"
-    command     = "python3 -m venv .venv && source .venv/bin/activate && pip install devmiko"
-    interpreter = ["/bin/bash", "-c"]
-  }
-}
-
 resource "null_resource" "ftd_onboarding_script" {
-  depends_on = [null_resource.install_requirements_for_onboarding]
-  count      = length(var.ftd_ips)
+  count = length(var.ftd_ips)
 
   triggers = {
     generated_command = cdo_ftd_device.ngfw[count.index].generated_command
@@ -126,7 +107,7 @@ resource "null_resource" "ftd_onboarding_script" {
   }
 
   provisioner "local-exec" {
-    command     = ".venv/bin/python3 cdo.py --host ${self.triggers.host_ip} --username admin --password dCloud123! --gen_command '${self.triggers.generated_command}'"
+    command     = "../.venv/bin/python3 cdo.py --host ${self.triggers.host_ip} --username admin --password dCloud123! --gen_command '${self.triggers.generated_command}'"
     working_dir = "${path.root}/scripts/device-onboarding"
     interpreter = ["/bin/bash", "-c"]
   }

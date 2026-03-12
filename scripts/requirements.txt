@@ -1,0 +1,8 @@
+# Shared Python dependencies for all automation scripts
+# Used by: cli.py, ospf, bgp, config-import, device-onboarding, reset
+requests>=2.25.1
+urllib3>=1.26.0
+shutup
+devmiko
+rich>=13.0.0
+typer>=0.9.0
