@@ -114,7 +114,7 @@ resource "fmc_device_ipv4_static_route" "dc_branch_evpn_route" {
     id = fmc_network.Branch-EVPN-Underlay.id
   }]
   gateway_host_literal = "198.18.8.0"
-  metric_value         = 1
+  metric         = 1
 
   depends_on = [
     var.devices,
@@ -133,7 +133,7 @@ resource "fmc_device_ipv4_static_route" "dc_branch_c8kv_route" {
     id = fmc_host.BRANCH-SITE-105-ROUTER.id
   }]
   gateway_host_literal = "198.18.8.0"
-  metric_value         = 1
+  metric         = 1
 
   depends_on = [
     var.devices,
@@ -151,7 +151,7 @@ resource "fmc_device_ipv4_static_route" "dc_hq_c8kv_route" {
     id = fmc_host.HQ-SITE10-CEDGE8Kv.id
   }]
   gateway_host_literal = "198.18.8.0"
-  metric_value         = 1
+  metric         = 1
 
   depends_on = [
     var.devices,
@@ -169,7 +169,7 @@ resource "fmc_device_ipv4_static_route" "route_to_prod_wan" {
     id = fmc_network.Branch-EVPN-Overlay-PROD.id
   }]
   gateway_host_literal = "198.18.8.2"
-  metric_value         = 1
+  metric         = 1
 
   depends_on = [
     var.devices,
@@ -187,7 +187,7 @@ resource "fmc_device_ipv4_static_route" "route_to_iot_wan" {
     id = fmc_network.Branch-EVPN-Overlay-IOT.id
   }]
   gateway_host_literal = "198.18.8.4"
-  metric_value         = 1
+  metric         = 1
 
   depends_on = [
     var.devices,
@@ -205,7 +205,7 @@ resource "fmc_device_ipv4_static_route" "route_to_secure_access_peer1" {
     id = fmc_host.Secure_Access_BGP_Peer_1.id
   }]
   gateway_host_literal = "169.254.6.1"
-  metric_value         = 1
+  metric         = 1
 
   depends_on = [
     var.devices,
@@ -223,7 +223,7 @@ resource "fmc_device_ipv4_static_route" "route_to_secure_access_peer2" {
     id = fmc_host.Secure_Access_BGP_Peer_2.id
   }]
   gateway_host_literal = "169.254.6.5"
-  metric_value         = 1
+  metric         = 1
 
   depends_on = [
     var.devices,

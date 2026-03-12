@@ -21,6 +21,6 @@ terraform {
 # Manage existing NetFlowGrp interface group (will be imported by deploy script)
 resource "fmc_interface_group" "netflow_managed" {
   name           = "NetFlowGrp"
-  interface_mode = "ROUTED"
+  interface_type = "ROUTED"
   interfaces     = var.netflow_interfaces
 }

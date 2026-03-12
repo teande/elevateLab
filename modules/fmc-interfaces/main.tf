@@ -32,7 +32,7 @@ resource "fmc_device_physical_interface" "dc_g0_0" {
   security_zone_id         = var.security_zones.WAN.id
   ipv4_static_address      = "198.18.8.1"
   ipv4_static_netmask      = "31"
-  enable_sgt_propagate     = true
+  sgt_propagate            = true
   ip_based_monitoring      = true
   ip_based_monitoring_type = "AUTO"
 
@@ -53,7 +53,7 @@ resource "fmc_device_physical_interface" "dc_g0_1" {
   security_zone_id         = var.security_zones.DMZ.id
   ipv4_static_address      = "198.18.9.1"
   ipv4_static_netmask      = "24"
-  enable_sgt_propagate     = true
+  sgt_propagate            = true
   ip_based_monitoring      = true
   ip_based_monitoring_type = "AUTO"
 
@@ -74,7 +74,7 @@ resource "fmc_device_physical_interface" "dc_g0_2" {
   security_zone_id         = var.security_zones.INTERNET.id
   ipv4_static_address      = "198.18.3.2"
   ipv4_static_netmask      = "24"
-  enable_sgt_propagate     = false
+  sgt_propagate            = false
   ip_based_monitoring      = true
   ip_based_monitoring_type = "AUTO"
 
@@ -95,7 +95,7 @@ resource "fmc_device_physical_interface" "dc_g0_3" {
   security_zone_id         = var.security_zones.DATA_CENTER.id
   ipv4_static_address      = "198.18.5.1"
   ipv4_static_netmask      = "24"
-  enable_sgt_propagate     = false
+  sgt_propagate            = false
   ip_based_monitoring      = true
   ip_based_monitoring_type = "AUTO"
 
@@ -107,17 +107,17 @@ resource "fmc_device_physical_interface" "dc_g0_3" {
 
 # PROD-WAN Interface
 resource "fmc_device_physical_interface" "dc_g0_4" {
-  device_id            = var.devices[0].id
-  name                 = "GigabitEthernet0/4"
-  logical_name         = "PROD-WAN"
-  description          = "PROD-WAN"
-  mode                 = "NONE"
-  enabled              = true
-  security_zone_id     = var.security_zones.WAN.id
-  ipv4_static_address  = "198.18.8.3"
-  ipv4_static_netmask  = "31"
-  enable_sgt_propagate = false
-  ip_based_monitoring  = false
+  device_id           = var.devices[0].id
+  name                = "GigabitEthernet0/4"
+  logical_name        = "PROD-WAN"
+  description         = "PROD-WAN"
+  mode                = "NONE"
+  enabled             = true
+  security_zone_id    = var.security_zones.WAN.id
+  ipv4_static_address = "198.18.8.3"
+  ipv4_static_netmask = "31"
+  sgt_propagate       = false
+  ip_based_monitoring = false
 
   depends_on = [
     var.devices,
@@ -127,17 +127,17 @@ resource "fmc_device_physical_interface" "dc_g0_4" {
 
 # IOT-WAN Interface
 resource "fmc_device_physical_interface" "dc_g0_5" {
-  device_id            = var.devices[0].id
-  name                 = "GigabitEthernet0/5"
-  logical_name         = "IOT-WAN"
-  description          = "IOT-WAN"
-  mode                 = "NONE"
-  enabled              = true
-  security_zone_id     = var.security_zones.WAN.id
-  ipv4_static_address  = "198.18.8.5"
-  ipv4_static_netmask  = "31"
-  enable_sgt_propagate = false
-  ip_based_monitoring  = false
+  device_id           = var.devices[0].id
+  name                = "GigabitEthernet0/5"
+  logical_name        = "IOT-WAN"
+  description         = "IOT-WAN"
+  mode                = "NONE"
+  enabled             = true
+  security_zone_id    = var.security_zones.WAN.id
+  ipv4_static_address = "198.18.8.5"
+  ipv4_static_netmask = "31"
+  sgt_propagate       = false
+  ip_based_monitoring = false
 
   depends_on = [
     var.devices,
@@ -147,16 +147,16 @@ resource "fmc_device_physical_interface" "dc_g0_5" {
 
 # Application Network Interface
 resource "fmc_device_physical_interface" "dc_g0_6" {
-  device_id                = var.devices[0].id
-  name                     = "GigabitEthernet0/6"
-  logical_name             = "APP"
-  description              = "Application Network"
-  mode                     = "NONE"
-  enabled                  = true
+  device_id    = var.devices[0].id
+  name         = "GigabitEthernet0/6"
+  logical_name = "APP"
+  description  = "Application Network"
+  mode         = "NONE"
+  enabled      = true
   # security_zone_id not set — G0/6 has no zone in reference tenant
   ipv4_static_address      = "198.18.11.1"
   ipv4_static_netmask      = "24"
-  enable_sgt_propagate     = false
+  sgt_propagate            = false
   ip_based_monitoring      = true
   ip_based_monitoring_type = "AUTO"
 
@@ -171,7 +171,7 @@ resource "fmc_device_physical_interface" "dc_g0_6" {
 ################################################################################################
 
 # VTI Interface Resources (these will be imported via the deploy script)
-resource "fmc_device_vti_interface" "WAN_static_vti_1" {
+resource "fmc_device_virtual_tunnel_interface" "WAN_static_vti_1" {
   device_id                         = var.devices[0].id
   tunnel_type                       = "STATIC"
   logical_name                      = "WAN_static_vti_1"
@@ -183,8 +183,8 @@ resource "fmc_device_vti_interface" "WAN_static_vti_1" {
   tunnel_source_interface_id        = fmc_device_physical_interface.dc_g0_2.id
   tunnel_source_interface_name      = "GigabitEthernet0/2"
   tunnel_mode                       = "ipv4"
-  ipv4_address                      = "169.254.6.2"
-  ipv4_netmask                      = "30"
+  ipv4_static_address               = "169.254.6.2"
+  ipv4_static_netmask               = "30"
   ip_based_monitoring               = false
   http_based_application_monitoring = true
 
@@ -195,7 +195,7 @@ resource "fmc_device_vti_interface" "WAN_static_vti_1" {
   ]
 }
 
-resource "fmc_device_vti_interface" "WAN_static_vti_2" {
+resource "fmc_device_virtual_tunnel_interface" "WAN_static_vti_2" {
   device_id                         = var.devices[0].id
   tunnel_type                       = "STATIC"
   logical_name                      = "WAN_static_vti_2"
@@ -207,8 +207,8 @@ resource "fmc_device_vti_interface" "WAN_static_vti_2" {
   tunnel_source_interface_id        = fmc_device_physical_interface.dc_g0_2.id
   tunnel_source_interface_name      = "GigabitEthernet0/2"
   tunnel_mode                       = "ipv4"
-  ipv4_address                      = "169.254.6.6"
-  ipv4_netmask                      = "30"
+  ipv4_static_address               = "169.254.6.6"
+  ipv4_static_netmask               = "30"
   ip_based_monitoring               = false
   http_based_application_monitoring = true
 

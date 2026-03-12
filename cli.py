@@ -234,12 +234,12 @@ def deploy() -> None:
         for label, address, setter in [
             (
                 "VTI1",
-                "module.fmc_vti_discovery.data.fmc_device_vti_interface.WAN_static_vti_1",
+                "module.fmc_vti_discovery.data.fmc_device_virtual_tunnel_interface.WAN_static_vti_1",
                 "vti1",
             ),
             (
                 "VTI2",
-                "module.fmc_vti_discovery.data.fmc_device_vti_interface.WAN_static_vti_2",
+                "module.fmc_vti_discovery.data.fmc_device_virtual_tunnel_interface.WAN_static_vti_2",
                 "vti2",
             ),
         ]:
@@ -299,12 +299,12 @@ def deploy() -> None:
 
     vti_imports = [
         (
-            "module.fmc_interfaces.fmc_device_vti_interface.WAN_static_vti_1",
+            "module.fmc_interfaces.fmc_device_virtual_tunnel_interface.WAN_static_vti_1",
             vti1_id,
             "WAN Static VTI 1 (Tunnel1)",
         ),
         (
-            "module.fmc_interfaces.fmc_device_vti_interface.WAN_static_vti_2",
+            "module.fmc_interfaces.fmc_device_virtual_tunnel_interface.WAN_static_vti_2",
             vti2_id,
             "WAN Static VTI 2 (Tunnel2)",
         ),

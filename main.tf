@@ -98,9 +98,6 @@ module "fmc_policies" {
   # nat_policy not present in base tenant being replicated
   # nat_policy      = module.fmc_devices.nat_policy
   device_names = var.device_name
-  ftd_ips      = var.ftd_ips
-  cdfmc_host   = var.cdfmc_host
-  scc_token    = var.scc_token
 }
 
 # Configure OSPF (runs after policies but before BGP and VPN)

@@ -8,10 +8,18 @@ terraform {
 }
 
 ################################################################################################
+# Platform Settings Policy Data Source
+################################################################################################
+
+data "fmc_ftd_platform_settings" "platform_policy" {
+  name = "vFTD-platform-policy"
+}
+
+################################################################################################
 # Policy Assignments
 ################################################################################################
 
-# DC Firewall Policy Assignments
+# DC Firewall Access Policy Assignments
 resource "fmc_policy_assignment" "access_policy_assignments" {
   count       = length(var.device_names)
   policy_id   = var.access_policies[count.index].id
@@ -20,6 +28,7 @@ resource "fmc_policy_assignment" "access_policy_assignments" {
     {
       id   = var.devices[count.index].id
       type = "Device"
+      name = var.device_names[count.index]
     }
   ]
 
@@ -37,6 +46,7 @@ resource "fmc_policy_assignment" "access_policy_assignments" {
 #     {
 #       id   = var.devices[0].id
 #       type = "Device"
+#       name = var.device_names[0]
 #     }
 #   ]
 #
@@ -46,20 +56,20 @@ resource "fmc_policy_assignment" "access_policy_assignments" {
 #   ]
 # }
 
-resource "null_resource" "platform_policy_assignment" {
-  count = length(var.ftd_ips)
-  triggers = {
-    device_id = var.devices[0].id
-    # run_every_time = timestamp()
-  }
-
-  provisioner "local-exec" {
-    command     = "../.venv/bin/python3 platsettings.py --host ${var.cdfmc_host} --token ${var.scc_token} --deviceid ${var.devices[count.index].id} --is_cdfmc 'true' --platformpolicy_name 'vFTD-platform-policy'"
-    working_dir = "${path.module}/../../scripts/config-import"
-    interpreter = ["/bin/bash", "-c"]
-  }
+# Platform Settings Policy Assignment
+resource "fmc_policy_assignment" "platform_policy_assignments" {
+  count       = length(var.device_names)
+  policy_id   = data.fmc_ftd_platform_settings.platform_policy.id
+  policy_type = "FTDPlatformSettingsPolicy"
+  targets = [
+    {
+      id   = var.devices[count.index].id
+      type = "Device"
+      name = var.device_names[count.index]
+    }
+  ]
 
   depends_on = [
-    var.devices
+    var.devices,
   ]
 }

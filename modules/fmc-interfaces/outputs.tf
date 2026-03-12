@@ -6,8 +6,8 @@ output "physical_interfaces" {
 output "created_vti_interfaces" {
   description = "Created VTI interfaces"
   value = {
-    WAN_static_vti_1 = fmc_device_vti_interface.WAN_static_vti_1
-    WAN_static_vti_2 = fmc_device_vti_interface.WAN_static_vti_2
+    WAN_static_vti_1 = fmc_device_virtual_tunnel_interface.WAN_static_vti_1
+    WAN_static_vti_2 = fmc_device_virtual_tunnel_interface.WAN_static_vti_2
   }
 }
 

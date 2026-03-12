@@ -14,15 +14,3 @@ variable "access_policies" {
 variable "device_names" {
   description = "Device names"
 }
-
-variable "ftd_ips" {
-  description = "FTD IP addresses"
-}
-
-variable "cdfmc_host" {
-  description = "cdFMC host"
-}
-
-variable "scc_token" {
-  description = "SCC token"
-}
