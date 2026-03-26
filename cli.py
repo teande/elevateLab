@@ -311,19 +311,23 @@ def deploy() -> None:
     ]
 
     for address, vti_id, desc in vti_imports:
+        # Always import fresh — remove stale state first if present
         if tf.resource_exists_in_state(address, cwd=cwd):
-            print_import_status(desc, already_exists=True)
-        else:
-            with console.status(f"[step]Importing {desc}...[/step]"):
-                try:
-                    tf.import_resource(address, f"{device_id},{vti_id}", cwd=cwd)
-                except subprocess.CalledProcessError as e:
-                    print_error(
-                        f"Import failed for {desc} "
-                        f"(DEVICE_ID={device_id}, VTI_ID={vti_id})\n{e.stderr}"
-                    )
-                    raise typer.Exit(1)
-            print_import_status(desc, already_exists=False)
+            try:
+                tf.state_rm(address, cwd=cwd)
+            except subprocess.CalledProcessError as e:
+                print_error(f"Could not remove stale state for {desc}:\n{e.stderr}")
+                raise typer.Exit(1)
+        with console.status(f"[step]Importing {desc}...[/step]"):
+            try:
+                tf.import_resource(address, f"{device_id},{vti_id}", cwd=cwd)
+            except subprocess.CalledProcessError as e:
+                print_error(
+                    f"Import failed for {desc} "
+                    f"(DEVICE_ID={device_id}, VTI_ID={vti_id})\n{e.stderr}"
+                )
+                raise typer.Exit(1)
+        print_import_status(desc, already_exists=False)
 
     # --- Step 7/11: NetFlowGrp Import ---
     step = 7
@@ -469,34 +473,60 @@ def reset() -> None:
     venv_python = str(VENV_PYTHON)
 
     console.print(f"  Resetting tenant (device: [cyan]{device_name}[/cyan])...")
-    with console.status("[step]Running reset script...[/step]"):
-        try:
-            result = subprocess.run(
-                [
-                    venv_python,
-                    str(reset_script),
-                    "--scc-host",
-                    scc_host,
-                    "--fmc-host",
-                    cdfmc_host,
-                    "--token",
-                    scc_token,
-                    "--device-name",
-                    device_name,
-                ],
-                cwd=str(ROOT_DIR / "scripts" / "reset"),
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-        except subprocess.CalledProcessError as e:
-            print_error(f"Reset failed:\n{e.stderr}")
-            if e.stdout:
-                console.print(e.stdout)
-            raise typer.Exit(1)
+    proc = subprocess.Popen(
+        [
+            venv_python,
+            str(reset_script),
+            "--scc-host", scc_host,
+            "--fmc-host", cdfmc_host,
+            "--token", scc_token,
+            "--device-name", device_name,
+        ],
+        cwd=str(ROOT_DIR / "scripts" / "reset"),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    for line in proc.stdout:
+        console.print(line.rstrip())
+    proc.wait()
+    if proc.returncode != 0:
+        print_error("Reset failed — see output above.")
+        raise typer.Exit(1)
 
-    if result.stdout:
-        console.print(result.stdout.rstrip())
+    # Clear device-specific Terraform state so re-deploy starts fresh
+    console.print()
+    console.print("  Clearing device-specific state...")
+    cwd = str(ROOT_DIR)
+    state_rm_addresses = [
+        "module.fmc_devices.null_resource.import_firewall_config",
+        "module.fmc_interfaces.fmc_device_physical_interface.dc_g0_0",
+        "module.fmc_interfaces.fmc_device_physical_interface.dc_g0_1",
+        "module.fmc_interfaces.fmc_device_physical_interface.dc_g0_2",
+        "module.fmc_interfaces.fmc_device_physical_interface.dc_g0_3",
+        "module.fmc_interfaces.fmc_device_physical_interface.dc_g0_4",
+        "module.fmc_interfaces.fmc_device_physical_interface.dc_g0_5",
+        "module.fmc_interfaces.fmc_device_physical_interface.dc_g0_6",
+        "module.fmc_interfaces.fmc_device_virtual_tunnel_interface.WAN_static_vti_1",
+        "module.fmc_interfaces.fmc_device_virtual_tunnel_interface.WAN_static_vti_2",
+        "module.fmc_policies.fmc_policy_assignment.access_policy_assignments[0]",
+        "module.fmc_policies.fmc_policy_assignment.platform_policy_assignments[0]",
+    ]
+    for address in state_rm_addresses:
+        short = address.split(".")[-1]
+        if tf.resource_exists_in_state(address, cwd=cwd):
+            try:
+                tf.state_rm(address, cwd=cwd)
+                print_success(f"Removed {short} from state")
+            except subprocess.CalledProcessError as e:
+                print_warning(f"Could not remove {short}: {e.stderr}")
+        else:
+            console.print(f"    [info]  {short} — not in state (skipped)[/info]")
+
+    # Clear deploy cache so next run re-executes all steps
+    PROGRESS_FILE.unlink(missing_ok=True)
+    CACHE_FILE.unlink(missing_ok=True)
+    console.print("    [info]  Deploy cache cleared[/info]")
 
     print_success("Tenant reset complete")
     console.print()
