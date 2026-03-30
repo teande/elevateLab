@@ -84,7 +84,7 @@ def cleanup_vpn_topologies(fmc_host, token):
 # CDO API v1 docs: https://developer.cisco.com/docs/cisco-security-cloud-control-firewall-manager/
 # API base: https://api.{region}.security.cisco.com/firewall
 # Endpoints: GET  /v1/inventory/devices
-#            DELETE /v1/inventory/devices/{deviceUid}
+#            POST /v1/inventory/devices/ftds/cdfmcManaged/{deviceUid}/delete
 
 
 def derive_cdo_api_base(scc_host):
@@ -121,9 +121,9 @@ def find_cdo_device(api_base, token, device_name):
 
 
 def deregister_cdo_device(api_base, token, device_uid):
-    url = f"{api_base}/v1/inventory/devices/{device_uid}"
+    url = f"{api_base}/v1/inventory/devices/ftds/cdfmcManaged/{device_uid}/delete"
     try:
-        resp = requests.delete(url, headers=cdo_headers(token), verify=False)
+        resp = requests.post(url, headers=cdo_headers(token), verify=False)
         if resp.status_code not in (200, 202, 204):
             print(f"ERROR: Deregistration returned {resp.status_code}: {resp.text}", file=sys.stderr)
             sys.exit(1)
