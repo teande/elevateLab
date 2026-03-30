@@ -12,6 +12,7 @@ Reset sequence:
 """
 
 import argparse
+import re
 import sys
 import time
 
@@ -80,19 +81,36 @@ def cleanup_vpn_topologies(fmc_host, token):
 
 # ── CDO: Device deregistration ────────────────────────────────────────────────
 #
-# NOTE: CDO REST API endpoints below follow the CDO API v1 spec.
-# If deregistration calls fail with 404, verify the correct path against:
-# https://developer.cisco.com/docs/cisco-defense-orchestrator/
+# CDO API v1 docs: https://developer.cisco.com/docs/cisco-security-cloud-control-firewall-manager/
+# API base: https://api.{region}.security.cisco.com/firewall
+# Endpoints: GET  /v1/inventory/devices
+#            DELETE /v1/inventory/devices/{deviceUid}
 
 
-def find_cdo_device(scc_host, token, device_name):
+def derive_cdo_api_base(scc_host):
+    """Derive CDO API base URL from SCC portal URL.
+
+    https://us.manage.security.cisco.com → https://api.us.security.cisco.com/firewall
+    https://eu.manage.security.cisco.com → https://api.eu.security.cisco.com/firewall
+    """
+    match = re.match(r"https?://(\w+)\.manage\.security\.cisco\.com", scc_host)
+    if match:
+        region = match.group(1)
+        return f"https://api.{region}.security.cisco.com/firewall"
+    # Fallback: assume it's already an API URL
+    return scc_host.rstrip("/")
+
+
+def find_cdo_device(api_base, token, device_name):
     """Return device UID if the named FTD exists in CDO, else None."""
-    url = f"{scc_host}/api/rest/v1/device/ftds"
+    url = f"{api_base}/v1/inventory/devices"
     try:
-        resp = requests.get(url, headers=cdo_headers(token), verify=False)
+        resp = requests.get(
+            url, headers=cdo_headers(token), verify=False, params={"limit": "200"}
+        )
         resp.raise_for_status()
         data = resp.json()
-        items = data if isinstance(data, list) else data.get("items", [])
+        items = data.get("items", []) if isinstance(data, dict) else data
         for device in items:
             if device.get("name") == device_name:
                 return device.get("uid") or device.get("id")
@@ -102,8 +120,8 @@ def find_cdo_device(scc_host, token, device_name):
         sys.exit(1)
 
 
-def deregister_cdo_device(scc_host, token, device_uid):
-    url = f"{scc_host}/api/rest/v1/device/ftds/{device_uid}"
+def deregister_cdo_device(api_base, token, device_uid):
+    url = f"{api_base}/v1/inventory/devices/{device_uid}"
     try:
         resp = requests.delete(url, headers=cdo_headers(token), verify=False)
         if resp.status_code not in (200, 202, 204):
@@ -114,12 +132,12 @@ def deregister_cdo_device(scc_host, token, device_uid):
         sys.exit(1)
 
 
-def poll_until_gone(scc_host, token, device_name):
+def poll_until_gone(api_base, token, device_name):
     """Block until device no longer appears in CDO or timeout."""
     print(f"  Polling every {POLL_INTERVAL_SEC}s (timeout: {POLL_TIMEOUT_SEC}s)...")
     elapsed = 0
     while elapsed < POLL_TIMEOUT_SEC:
-        if find_cdo_device(scc_host, token, device_name) is None:
+        if find_cdo_device(api_base, token, device_name) is None:
             print(f"  Device gone after {elapsed}s.")
             return
         print(f"  Still present at {elapsed}s...")
@@ -185,13 +203,14 @@ def main():
     cleanup_vpn_topologies(args.fmc_host, args.token)
 
     # Step 2 — CDO device deregistration
-    print(f"Step 2: Looking for '{args.device_name}' in CDO...")
-    uid = find_cdo_device(args.scc_host, args.token, args.device_name)
+    api_base = derive_cdo_api_base(args.scc_host)
+    print(f"Step 2: Looking for '{args.device_name}' in CDO ({api_base})...")
+    uid = find_cdo_device(api_base, args.token, args.device_name)
     if uid:
         print(f"  Found (UID: {uid}). Initiating deregistration...")
-        deregister_cdo_device(args.scc_host, args.token, uid)
+        deregister_cdo_device(api_base, args.token, uid)
         print("  Waiting for deregistration to complete...")
-        poll_until_gone(args.scc_host, args.token, args.device_name)
+        poll_until_gone(api_base, args.token, args.device_name)
     else:
         print(f"  '{args.device_name}' not found in CDO — already deregistered.")
 
