@@ -494,30 +494,46 @@ def reset() -> None:
         print_error("Reset failed — see output above.")
         raise typer.Exit(1)
 
-    # Clear device-specific Terraform state so re-deploy starts fresh
+    # Clear device-specific Terraform state so re-deploy starts fresh.
+    # Module-level rm for purely device-scoped modules; individual rm for
+    # static routes in fmc_networking (keeps global network/host objects).
     console.print()
     console.print("  Clearing device-specific state...")
     cwd = str(ROOT_DIR)
-    state_rm_addresses = [
-        "module.fmc_devices.null_resource.import_firewall_config",
-        "module.fmc_interfaces.fmc_device_physical_interface.dc_g0_0",
-        "module.fmc_interfaces.fmc_device_physical_interface.dc_g0_1",
-        "module.fmc_interfaces.fmc_device_physical_interface.dc_g0_2",
-        "module.fmc_interfaces.fmc_device_physical_interface.dc_g0_3",
-        "module.fmc_interfaces.fmc_device_physical_interface.dc_g0_4",
-        "module.fmc_interfaces.fmc_device_physical_interface.dc_g0_5",
-        "module.fmc_interfaces.fmc_device_physical_interface.dc_g0_6",
-        "module.fmc_interfaces.fmc_device_virtual_tunnel_interface.WAN_static_vti_1",
-        "module.fmc_interfaces.fmc_device_virtual_tunnel_interface.WAN_static_vti_2",
-        "module.fmc_policies.fmc_policy_assignment.access_policy_assignments[0]",
-        "module.fmc_policies.fmc_policy_assignment.platform_policy_assignments[0]",
+
+    module_rms = [
+        "module.fmc_devices",
+        "module.fmc_interfaces",
+        "module.fmc_interface_groups",
+        "module.fmc_policies",
+        "module.fmc_ospf",
+        "module.fmc_bgp",
+        "module.fmc_vpn",
     ]
-    for address in state_rm_addresses:
+    for module in module_rms:
+        try:
+            tf.state_rm(module, cwd=cwd)
+            print_success(f"Removed {module}")
+        except subprocess.CalledProcessError:
+            console.print(f"    [info]  {module} — not in state (skipped)[/info]")
+
+    # Static routes are device-scoped but live alongside global objects
+    route_rms = [
+        "module.fmc_networking.fmc_device_ipv4_static_route.route_to_internet",
+        "module.fmc_networking.fmc_device_ipv4_static_route.dc_branch_evpn_route",
+        "module.fmc_networking.fmc_device_ipv4_static_route.dc_branch_c8kv_route",
+        "module.fmc_networking.fmc_device_ipv4_static_route.dc_hq_c8kv_route",
+        "module.fmc_networking.fmc_device_ipv4_static_route.route_to_prod_wan",
+        "module.fmc_networking.fmc_device_ipv4_static_route.route_to_iot_wan",
+        "module.fmc_networking.fmc_device_ipv4_static_route.route_to_secure_access_peer1",
+        "module.fmc_networking.fmc_device_ipv4_static_route.route_to_secure_access_peer2",
+    ]
+    for address in route_rms:
         short = address.split(".")[-1]
         if tf.resource_exists_in_state(address, cwd=cwd):
             try:
                 tf.state_rm(address, cwd=cwd)
-                print_success(f"Removed {short} from state")
+                print_success(f"Removed {short}")
             except subprocess.CalledProcessError as e:
                 print_warning(f"Could not remove {short}: {e.stderr}")
         else:
