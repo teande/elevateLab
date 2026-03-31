@@ -1,407 +1,190 @@
-# Cisco FMC Challenge Lab Infrastructure
+# Elevate Lab — FMC Infrastructure Automation
 
-This project provides a complete Terraform-based automation solution for configuring Cisco Firepower Management Center (FMC) lab environments, specifically designed for challenge labs and training environments.
+Terraform automation for configuring Cisco Firepower Management Center (FMC) lab environments. Targets a cloud-delivered FMC (cdFMC) instance managed through Cisco Defense Orchestrator (CDO/SCC).
 
-## 🎯 Project Overview
+## Overview
 
-This infrastructure automation handles:
-- **Device Onboarding**: Automated FTD device registration and configuration import
-- **Interface Management**: Physical and VTI interface configuration with security zones
-- **Network Configuration**: Static routes, network objects, and hosts
-- **Policy Management**: Access control and NAT policy assignments
-- **OSPF Configuration**: Dynamic routing protocol setup
-- **Multi-Cloud Defense**: MCD policy integration
-- **VPN Tunnels**: Site-to-site VPN configurations to AWS and secure access
+The automation handles the full lifecycle of a lab pod:
 
-## 🏗️ Architecture
+- **Device onboarding**: Registers the FTD with CDO, imports base configuration from `.sfo` backup
+- **Interface configuration**: 7 physical interfaces + 2 VTI tunnel interfaces with security zones
+- **Network objects and static routes**: Branch EVPN networks, host objects, 8 static routes
+- **Policy assignments**: Access control policy + platform policy assigned to the device
+- **OSPF**: Process 1 / Area 0 via Python REST API
+- **BGP**: AS 65532, neighbors via Tunnel1/Tunnel2 to Secure Access
+- **VPN**: Single IKEv2 site-to-site tunnel (SecureAccess)
 
-The project uses a modular Terraform architecture with the following execution flow:
+## Providers
+
+| Provider | Version |
+| -------- | ------- |
+| `CiscoDevNet/fmc` | 2.0.1 |
+| `CiscoDevnet/cdo` | latest |
+
+## Module Execution Order
 
 ```
-1. Device Registration & Config Import
-2. VTI Interface Discovery
-3. Physical & VTI Interface Configuration
-4. Interface Group Management
-5. Network Objects & Static Routes
-6. Policy Assignments
-7. OSPF Configuration
-8. VPN Site-to-Site Setup (Always Last)
+fmc-devices → fmc-vti-discovery → fmc-interfaces → fmc-interface-groups
+    → fmc-networking → fmc-network-objects → fmc-policies → fmc-ospf → fmc-bgp → fmc-vpn
 ```
 
-## 📋 Prerequisites
+VPN module always runs last. Never reorder without understanding the full `depends_on` chain.
 
-### Required Software
+## Module Reference
+
+| Module | Purpose |
+| ------ | ------- |
+| `fmc-devices` | `.sfo` config import, CDO device registration, SSH onboarding |
+| `fmc-vti-discovery` | Data sources — discovers Tunnel1 and Tunnel2 interface IDs |
+| `fmc-interfaces` | Physical (G0/0–G0/6) and VTI interface config with zone assignment |
+| `fmc-interface-groups` | Manages pre-existing `NetFlowGrp` (imported by deploy) |
+| `fmc-networking` | Network objects, host objects, 8 static routes |
+| `fmc-network-objects` | OSPF-specific network objects |
+| `fmc-policies` | ACP + platform policy assignments (native `fmc_policy_assignment`) |
+| `fmc-ospf` | OSPF Process 1 / Area 0 via Python REST API |
+| `fmc-bgp` | BGP AS 65532 via Python REST API |
+| `fmc-vpn` | IKEv2 site-to-site: SecureAccess |
+
+## Interface Layout
+
+| Interface | Logical Name | IP | Zone |
+| --------- | ------------ | -- | ---- |
+| G0/0 | Main-WAN | 198.18.8.1/31 | WAN |
+| G0/1 | DMZ | 198.18.9.1/24 | DMZ |
+| G0/2 | INTERNET | 198.18.3.2/24 | INTERNET |
+| G0/3 | DATA-CENTER | 198.18.5.1/24 | DATA-CENTER |
+| G0/4 | PROD-WAN | 198.18.8.3/31 | WAN |
+| G0/5 | IOT-WAN | 198.18.8.5/31 | WAN |
+| G0/6 | APP | 198.18.11.1/24 | — |
+| Tunnel1 | WAN_static_vti_1 | 169.254.6.2/30 | SecureAccess |
+| Tunnel2 | WAN_static_vti_2 | 169.254.6.6/30 | SecureAccess |
+
+VTI interfaces (Tunnel1, Tunnel2) are **imported** into state by the deploy script — not created fresh.
+
+## Prerequisites
+
 - **Terraform** >= 1.0
-- **Python 3.x** with `pip`
-- **Bash shell** (macOS/Linux)
+- **Python 3** with `pip`
+- Access to a cdFMC tenant and CDO/SCC API token
 
-### Required Credentials
-- **CDO/SCC Token**: For device management and API access
-- **cdFMC Host**: Your cloud FMC instance hostname
-- **FTD Device Access**: SSH credentials for device onboarding
+## Configuration
 
-### Cisco Environment
-- **cdFMC Instance**: Cloud-delivered FMC with API access
-- **FTD Device**: Virtual or physical FTD ready for onboarding
-- **Network Connectivity**: Lab network access for device management
+Copy `terraform.tfvars.ignore` to `terraform.tfvars` and fill in:
 
-## 🚀 Quick Start
-
-### 1. Set Required Variables
-
-Edit `terraform.tfvars`:
 ```hcl
-scc_token  = "your-scc-token-here"
-scc_host   = "https://us.manage.security.cisco.com"  # or your region
+scc_token  = "your-scc-api-token"
+scc_host   = "https://eu.manage.security.cisco.com"   # match your region
 cdfmc_host = "your-cdfmc-hostname.cisco.com"
 
-# Pre-configured (don't change unless needed)
+# Pre-configured for lab — change only if your pod differs
 ftd_ips     = ["198.18.133.39"]
-device_name = ["HQ_FTDv"]
+device_name = ["hqftdv"]
 policies    = ["HQ Firewall Policy"]
 ```
 
-### 2. Deploy Infrastructure
+`terraform.tfvars` and `*.tfstate` are gitignored — never commit them.
 
-**Automated Deployment (Recommended)**
-```bash
-./deploy_prep_pod_configuration.sh
-```
-
-> **💡 Tip**: You can also deploy specific modules individually using Terraform:
-> ```bash
-> terraform init
-> terraform apply -target=module.fmc_devices
-> terraform apply -target=module.fmc_ospf
-> ```
-
-### 3. Clean Up
+## Deploying
 
 ```bash
-./destroy.sh
+./cli.py deploy
 ```
 
-## 📁 Project Structure
+The deploy script is fully automated and self-bootstrapping (creates the Python venv automatically). It runs 11 steps:
 
-```
-challengeLab-clean/
-├── main.tf                           # Main Terraform configuration
-├── variables.tf                      # Variable definitions
-├── terraform.tfvars                  # Configuration values
-├── provider.tf                       # Provider configurations
-├── deploy_prep_pod_configuration.sh  # Automated deployment script
-├── destroy.sh                        # Cleanup script
-├── modules/                          # Terraform modules
-│   ├── fmc-devices/                  # Device registration & config import
-│   ├── fmc-vti-discovery/            # VTI interface discovery
-│   ├── fmc-interfaces/               # Physical & VTI interface config
-│   ├── fmc-interface-groups/         # Interface group management
-│   ├── fmc-networking/               # Networks, hosts, static routes
-│   ├── fmc-network-objects/          # OSPF network objects
-│   ├── fmc-policies/                 # Policy assignments
-│   ├── fmc-mcd/                      # Multi-Cloud Defense config
-│   ├── fmc-ospf/                     # OSPF configuration
-│   └── fmc-vpn/                      # VPN site-to-site tunnels
-└── scripts/                          # Python automation scripts
-    ├── config-import/                # Configuration import utilities
-    ├── device-onboarding/            # Device SSH onboarding
-    └── ospf/                         # OSPF automation
-```
+1. `terraform init`
+2. Python venv ready
+3. FTD device registration (`module.fmc_devices`)
+4. VTI discovery (`module.fmc_vti_discovery`)
+5. ID extraction (device ID, VTI IDs, NetFlowGrp ID)
+6. VTI interface import into state (always rm-then-import for idempotency)
+7. NetFlowGrp import into state
+8. Core configuration (interfaces, networking, objects, groups, policies)
+9. OSPF configuration
+10. BGP configuration
+11. VPN configuration
 
-## 🔧 Detailed Module Breakdown
+Progress is cached in `.pod_prepare_progress` and `.vti_ids_cache`. Delete these files to force a full re-run.
 
-### Core Infrastructure Modules
+## Resetting Between Sessions
 
-#### `fmc-devices`
-**Purpose**: Device registration and initial configuration import
-- Imports pre-built firewall configuration from `.sfo` backup file
-- Registers FTD device with CDO/SCC
-- Handles device onboarding via SSH automation
-- Discovers security zones and policies from imported config
-
-**Key Resources**:
-- `cdo_ftd_device`: Device registration
-- `null_resource`: Python-based config import and SSH onboarding
-
-#### `fmc-vti-discovery`
-**Purpose**: Discovers existing VTI interfaces without managing them
-- Data-only module for interface discovery
-- Maps logical names to physical tunnel IDs
-- Provides interface data for other modules
-
-**Discovered Interfaces**:
-- `Tunnel1` → `WAN_static_vti_1`
-- `Tunnel2` → `WAN_static_vti_2` 
-- `Tunnel3` → `ToSecureAccess`
-- `Virtual-Template1` → `WAN_dynamic_vti_1`
-
-#### `fmc-interfaces`
-**Purpose**: Configures all physical and VTI interfaces
-- 7 physical interfaces (G0/0 through G0/6)
-- 4 VTI interfaces (imported via deployment script)
-- Security zone assignments
-- IP addressing and interface settings
-
-**Interface Layout**:
-```
-G0/0: WAN (198.18.8.2/24)
-G0/1: DMZ (198.18.9.1/24)
-G0/2: INTERNET (198.18.3.2/24)
-G0/3: DATA-CENTER (198.18.5.1/24)
-G0/4: ATTACKER (198.18.14.1/24)
-G0/5: Transport (198.18.12.1/24)
-G0/6: APP (198.18.11.1/24)
-```
-
-#### `fmc-interface-groups`
-**Purpose**: Manages interface groupings
-- Creates `INSIDE_NETS` group with internal interfaces
-- Manages existing `NetFlowGrp` (imported during deployment)
-
-### Network Configuration Modules
-
-#### `fmc-networking`
-**Purpose**: Network objects, hosts, and static routing
-- Creates branch and overlay networks
-- Defines host objects for routing targets
-- Configures static routes for reachability
-
-**Key Networks**:
-- `Branch-EVPN-Overlay-Main`: 10.10.255.0/24
-- `Branch-EVPN-Underlay`: 172.30.255.0/24
-- `Coinforge1_net`: 10.104.255.0/24
-
-#### `fmc-network-objects`
-**Purpose**: OSPF-specific network objects
-- Network objects for OSPF area configuration
-- Used by OSPF automation script
-
-**OSPF Networks**:
-- `Apps`: 198.18.11.0/24 (data source - pre-existing)
-- `Attacker`: 198.18.14.0/24
-- `Data-Center`: 198.18.5.0/24
-- `DMZ`: 198.18.9.0/24
-- `Outside`: 198.18.3.0/24
-- `Transport`: 198.18.12.0/24
-
-### Policy and Routing Modules
-
-#### `fmc-policies`
-**Purpose**: Policy assignments and platform settings
-- Assigns access control policies to devices
-- Configures NAT policy assignments
-- Applies platform policy settings
-
-#### `fmc-ospf`
-**Purpose**: OSPF dynamic routing configuration
-- Uses Python automation for API-based OSPF setup
-- Configures OSPF Process 1 with Area 0
-- Adds all defined networks to OSPF area
-
-**Automation Details**:
-- Creates Python virtual environment
-- Installs required packages (`requests`)
-- Executes `cdfmc_ospf_automation.py` with Terraform-provided parameters
-- Uses static domain UUID for cdFMC compatibility
-
-#### `fmc-mcd`
-**Purpose**: Multi-Cloud Defense integration
-- Creates MCD security zones
-- Configures MCD access control policy
-- Sets up intrusion policy integration
-
-#### `fmc-vpn`
-**Purpose**: Site-to-site VPN tunnels (Always runs last)
-- 3 VPN tunnels: AWS1, AWS2, SecureAccess
-- IKEv2 configuration with pre-shared keys
-- VPN endpoint management
-
-**VPN Tunnels**:
-- `AWS_Tunnel_1`: AWS connectivity via Tunnel1
-- `AWS_Tunnel_2`: AWS connectivity via Tunnel2  
-- `SecureAccessToISE`: ISE integration via Tunnel3
-
-## 🤖 Automation Scripts
-
-### Configuration Import (`scripts/config-import/`)
-**Purpose**: Imports pre-built FMC configuration from backup file
-
-**Files**:
-- `main.py`: Main import script
-- `automation_backup.sfo`: Pre-built configuration backup
-- `platsettings.py`: Platform policy configuration
-
-**Usage**: Automatically called by `fmc-devices` module
-
-### Device Onboarding (`scripts/device-onboarding/`)
-**Purpose**: SSH-based device onboarding automation
-
-**Files**:
-- `cdo.py`: SSH automation for device registration commands
-
-**Usage**: Executes generated onboarding commands on FTD devices
-
-### OSPF Configuration (`scripts/ospf/`)
-**Purpose**: API-based OSPF configuration automation
-
-**Files**:
-- `cdfmc_ospf_automation.py`: Main OSPF automation script
-- `config.py`: Configuration management and parameter updates
-- `requirements.txt`: Python dependencies
-
-**Features**:
-- Direct REST API calls to cdFMC
-- Optimized with minimal API calls
-- Configures OSPF Process 1 with Area 0
-- Adds networks dynamically based on Terraform data
-
-## 🔄 Deployment Process
-
-### Automated Deployment Script
-
-The `deploy_prep_pod_configuration.sh` script provides intelligent, cached deployment:
-
-1. **Device Registration**: Registers FTD and imports configuration
-2. **VTI Discovery**: Maps existing tunnel interfaces
-3. **ID Extraction**: Caches interface and device IDs
-4. **VTI Import**: Imports VTI interfaces into Terraform state
-5. **NetFlow Import**: Manages existing interface groups
-6. **Core Configuration**: Applies interfaces, networking, policies
-7. **OSPF Configuration**: Sets up dynamic routing
-8. **VPN Configuration**: Configures site-to-site tunnels
-
-### Smart Caching Features
-
-- **Progress Tracking**: Skips completed steps on re-runs
-- **Resource Detection**: Checks Terraform state before operations
-- **ID Caching**: Stores extracted IDs for future runs
-- **Fast Recovery**: Quick restart from any failure point
-
-## 🌐 Network Design
-
-### Security Zones
-```
-WAN: External connectivity
-DMZ: Demilitarized zone
-INTERNET: Internet access
-DATA_CENTER: Internal data center
-ATTACKER: Attack simulation
-TRANSPORT: OSPF transport
-APPS: Application networks
-TUNNEL_ZONE: VPN tunnels
-SecureAccess: ISE connectivity
-DCtoMCD: Multi-cloud defense
-```
-
-### Routing Architecture
-- **Static Routes**: For AWS and branch connectivity
-- **OSPF**: Dynamic routing for internal networks
-- **VPN Tunnels**: Site-to-site connectivity
-
-## 🔍 Troubleshooting
-
-### Common Issues
-
-#### Device Onboarding Failures
 ```bash
-# Check device connectivity
-ping 198.18.133.39
-
-# Verify SSH access
-ssh admin@198.18.133.39
-
-# Review onboarding logs
-terraform apply -target=module.fmc_devices
+./cli.py reset
 ```
 
-#### VTI Interface Import Issues
+Cleans the cdFMC tenant and Terraform state so the next `./cli.py deploy` runs cleanly against a fresh pod. Sequence:
+
+1. Deletes the `SecureAccess` S2S VPN topology from FMC
+2. Deregisters the FTD from CDO and polls until gone
+3. Deletes the `HQ Firewall Policy` ACP (re-imported from `.sfo` on next deploy)
+4. Clears all device-scoped Terraform state
+5. Clears deploy cache files
+
+## Destroying
+
 ```bash
-# Check discovered interfaces
-terraform apply -target=module.fmc_vti_discovery
-
-# Manual interface import
-terraform import module.fmc_interfaces.fmc_device_vti_interface.WAN_static_vti_1 "device_id,interface_id"
-
-# Reset cached progress
-rm .pod_prepare_progress .vti_ids_cache
+./cli.py destroy
 ```
 
-#### OSPF Configuration Problems
+Removes OSPF-managed network objects and pre-imported resources from state first, then runs `terraform destroy`.
+
+## Common Commands
+
 ```bash
-# Test OSPF script manually
-cd scripts/ospf
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-python3 cdfmc_ospf_automation.py --fmc-url 'hostname' --api-key 'token' --device-id 'id' --network-ids '{...}'
-```
+# Deploy a specific module
+terraform apply -target=module.fmc_interfaces
 
-#### Policy Assignment Failures
-```bash
-# Verify imported policies exist
-terraform plan -target=module.fmc_policies
+# View current state
+terraform state list
 
-# Check policy names in tfvars
-# Ensure policies match imported configuration
-```
+# Remove a resource from state before re-importing
+terraform state rm module.fmc_interface_groups.fmc_interface_group.netflow_managed
 
-### Debug Mode
+# Force re-run of deploy from scratch
+rm -f .pod_prepare_progress .vti_ids_cache
+./cli.py deploy
 
-Enable detailed logging:
-```bash
+# Enable debug logging
 export TF_LOG=DEBUG
 terraform apply
 ```
 
-### State Management
+## Troubleshooting
 
-Reset specific modules:
+**Device registration fails / ACP not found**
+The deploy script expects the `.sfo` import to complete and the ACP to exist before registering the device. If the previous session's ACP is missing, run `./cli.py reset` first to ensure a clean state.
+
+**VTI import fails**
+VTI IDs are tied to the device. After a reset, the old IDs are stale. The deploy script always removes stale VTI state before importing (`rm-then-import` pattern). If it fails, delete `.vti_ids_cache` and re-run.
+
+**OSPF/BGP not applying**
+These are Python null_resource triggers. If the device ID changed (after a reset), they will re-run automatically on the next deploy.
+
+**State out of sync after manual operations**
 ```bash
-# Remove problematic resources
-terraform state rm module.module_name.resource_name
-
-# Re-import if needed
-terraform import module.module_name.resource_name resource_id
+terraform state list       # see what's in state
+terraform state rm <addr>  # remove a stale entry
 ```
 
-## 📚 Provider Documentation
+## Python Scripts
 
-- **FMC Provider**: [terraform-provider-fmc](https://registry.terraform.io/providers/CiscoDevNet/fmc/latest/docs)
-- **CDO Provider**: [terraform-provider-cdo](https://registry.terraform.io/providers/CiscoDevnet/cdo/latest/docs)
-- **FMC API**: [Firepower Management Center REST API Guide](https://developer.cisco.com/docs/fmc-rest-api/)
+All scripts share a single venv at `scripts/.venv/` (created automatically by `cli.py`).
 
-## 🔒 Security Considerations
+| Script | Purpose |
+| ------ | ------- |
+| `scripts/config-import/main.py` | Imports `.sfo` config backup to cdFMC via REST API |
+| `scripts/device-onboarding/cdo.py` | SSH automation for CDO registration command |
+| `scripts/ospf/cdfmc_ospf_automation.py` | Configures OSPF via FMC REST API |
+| `scripts/bgp/bgp_routing.py` | Configures BGP via FMC REST API |
+| `scripts/reset/reset.py` | Tenant cleanup between sessions |
 
-### Credential Management
-- Store SCC tokens securely
-- Use environment variables for sensitive data
-- Rotate API tokens regularly
+## Provider Documentation
 
-### State File Security
-- Store Terraform state securely
-- Use remote state backends for team environments
-- Encrypt state files
-
-## 🚨 Important Notes
-
-### Execution Order
-- **NEVER** change module execution order without understanding dependencies
-- **VPN module ALWAYS runs last** to avoid conflicts
-- **OSPF runs before VPN** for proper routing setup
-
-### State Management
-- VTI interfaces must be imported, not created fresh
-- NetFlowGrp interface group is pre-existing and managed
-- Some resources require specific import procedures
-
-### API Limitations
-- cdFMC has different API behavior than on-premise FMC
-- Static domain UUID used for cdFMC compatibility
-- Rate limiting may affect large deployments
+- [CiscoDevNet/fmc Terraform provider](https://registry.terraform.io/providers/CiscoDevNet/fmc/latest/docs)
+- [CiscoDevnet/cdo Terraform provider](https://registry.terraform.io/providers/CiscoDevnet/cdo/latest/docs)
+- [FMC REST API reference](https://developer.cisco.com/docs/fmc-rest-api/)
+- [CDO API reference](https://developer.cisco.com/docs/cisco-security-cloud-control-firewall-manager/)
 
 ---
 
-**Version**: 1.0  
-**Last Updated**: August 2025  
-**Terraform Version**: >= 1.0  
-**FMC Provider Version**: 2.0.0-rc4
+**FMC Provider**: 2.0.1 | **Terraform**: >= 1.0
