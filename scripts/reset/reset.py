@@ -8,7 +8,8 @@ deployment runs against a known-good state.
 Reset sequence:
   1. Delete S2S VPN topology objects from FMC
   2. Find and deregister old FTD device from CDO (async) + poll until gone
-  3. Delete the Access Control Policy (re-imported from .sfo on next deploy)
+  3. Delete global network/host objects (re-created by Terraform on next deploy)
+  4. Delete the Access Control Policy (re-imported from .sfo on next deploy)
 """
 
 import argparse
@@ -147,6 +148,80 @@ def poll_until_gone(api_base, token, device_name):
     sys.exit(1)
 
 
+# ── FMC: Global object cleanup ────────────────────────────────────────────────
+#
+# These objects are created by Terraform but persist on the cdFMC tenant after
+# a reset (state is wiped with the pod but the tenant is reused across events).
+# Delete them here so the next deploy can re-create them cleanly.
+
+# fmc-networking: network and host objects
+_NETWORK_OBJECTS = {
+    "Branch-EVPN-Overlay-Main",
+    "Branch-EVPN-Underlay",
+    "Branch-EVPN-Overlay-PROD",
+    "Branch-EVPN-Overlay-IOT",
+}
+_HOST_OBJECTS = {
+    "ExtGW",
+    "En-Cat8Kv",
+    "BRANCH-SITE-105-ROUTER",
+    "HQ-SITE10-CEDGE8Kv",
+    "Secure_Access_BGP_Peer_1",
+    "Secure_Access_BGP_Peer_2",
+}
+# fmc-network-objects: OSPF-specific network objects
+_OSPF_NETWORK_OBJECTS = {
+    "Apps",
+    "Attacker",
+    "Data-Center",
+    "DMZ",
+    "Outside",
+    "Transport",
+}
+
+
+def _list_fmc_objects(fmc_host, token, object_type):
+    """Return list of FMC objects of the given type (networks, hosts, etc.)."""
+    url = f"https://{fmc_host}/api/fmc_config/v1/domain/{DOMAIN_UUID}/object/{object_type}"
+    try:
+        resp = requests.get(
+            url, headers=fmc_headers(token), verify=False, params={"limit": 200}
+        )
+        resp.raise_for_status()
+        return resp.json().get("items", [])
+    except requests.exceptions.RequestException as e:
+        print(f"  WARNING: Could not list {object_type}: {e}", file=sys.stderr)
+        return []
+
+
+def _delete_fmc_object(fmc_host, token, object_type, obj_id, name):
+    url = f"https://{fmc_host}/api/fmc_config/v1/domain/{DOMAIN_UUID}/object/{object_type}/{obj_id}"
+    try:
+        resp = requests.delete(url, headers=fmc_headers(token), verify=False)
+        if resp.status_code in (200, 204):
+            print(f"  Deleted: {name}")
+        else:
+            print(f"  WARNING: {name} returned {resp.status_code}: {resp.text}", file=sys.stderr)
+    except requests.exceptions.RequestException as e:
+        print(f"  WARNING: Could not delete {name}: {e}", file=sys.stderr)
+
+
+def _cleanup_objects_by_name(fmc_host, token, object_type, target_names):
+    items = _list_fmc_objects(fmc_host, token, object_type)
+    matches = [i for i in items if i.get("name") in target_names]
+    if not matches:
+        print(f"  No {object_type} to delete — already clean.")
+        return
+    for obj in matches:
+        _delete_fmc_object(fmc_host, token, object_type, obj["id"], obj["name"])
+
+
+def cleanup_global_objects(fmc_host, token):
+    print("Step 3: Deleting global FMC network/host objects...")
+    _cleanup_objects_by_name(fmc_host, token, "networks", _NETWORK_OBJECTS | _OSPF_NETWORK_OBJECTS)
+    _cleanup_objects_by_name(fmc_host, token, "hosts", _HOST_OBJECTS)
+
+
 # ── FMC: ACP deletion ─────────────────────────────────────────────────────────
 
 
@@ -166,7 +241,7 @@ def get_acp_id(fmc_host, token):
 
 
 def delete_acp(fmc_host, token):
-    print(f"Step 3: Deleting Access Control Policy '{ACP_NAME}'...")
+    print(f"Step 4: Deleting Access Control Policy '{ACP_NAME}'...")
     acp_id = get_acp_id(fmc_host, token)
     if not acp_id:
         print("  ACP not found — already clean.")
@@ -214,7 +289,10 @@ def main():
     else:
         print(f"  '{args.device_name}' not found in CDO — already deregistered.")
 
-    # Step 3 — Delete ACP (re-imported from .sfo on next deploy)
+    # Step 3 — Delete global network/host objects (re-created by Terraform on next deploy)
+    cleanup_global_objects(args.fmc_host, args.token)
+
+    # Step 4 — Delete ACP (re-imported from .sfo on next deploy)
     delete_acp(args.fmc_host, args.token)
 
     print("=" * 54)
