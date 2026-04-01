@@ -8,8 +8,9 @@ deployment runs against a known-good state.
 Reset sequence:
   1. Delete S2S VPN topology objects from FMC
   2. Find and deregister old FTD device from CDO (async) + poll until gone
-  3. Delete global network/host objects (re-created by Terraform on next deploy)
-  4. Delete the Access Control Policy (re-imported from .sfo on next deploy)
+  3. Delete NAT policy (blocks object deletion if left in place)
+  4. Delete global network/host objects (re-created by Terraform on next deploy)
+  5. Delete the Access Control Policy (re-imported from .sfo on next deploy)
 """
 
 import argparse
@@ -33,6 +34,7 @@ VPN_TOPOLOGY_NAMES = {"SecureAccess"}
 
 # Must match var.policies in terraform.tfvars
 ACP_NAME = "HQ Firewall Policy"
+NAT_POLICY_NAME = "HQ NAT Policy"
 
 
 def fmc_headers(token):
@@ -148,6 +150,36 @@ def poll_until_gone(api_base, token, device_name):
     sys.exit(1)
 
 
+# ── FMC: NAT policy deletion ──────────────────────────────────────────────────
+
+
+def delete_nat_policy(fmc_host, token):
+    print(f"Step 3: Deleting NAT policy '{NAT_POLICY_NAME}'...")
+    url = f"https://{fmc_host}/api/fmc_config/v1/domain/{DOMAIN_UUID}/policy/ftdnatpolicies"
+    try:
+        resp = requests.get(url, headers=fmc_headers(token), verify=False)
+        resp.raise_for_status()
+        policies = resp.json().get("items", [])
+    except requests.exceptions.RequestException as e:
+        print(f"  WARNING: Could not list NAT policies: {e}", file=sys.stderr)
+        return
+
+    match = next((p for p in policies if p.get("name") == NAT_POLICY_NAME), None)
+    if not match:
+        print("  NAT policy not found — already clean.")
+        return
+
+    del_url = f"{url}/{match['id']}"
+    try:
+        resp = requests.delete(del_url, headers=fmc_headers(token), verify=False)
+        if resp.status_code in (200, 204):
+            print(f"  Deleted: {NAT_POLICY_NAME}")
+        else:
+            print(f"  WARNING: NAT delete returned {resp.status_code}: {resp.text}", file=sys.stderr)
+    except requests.exceptions.RequestException as e:
+        print(f"  WARNING: Could not delete NAT policy: {e}", file=sys.stderr)
+
+
 # ── FMC: Global object cleanup ────────────────────────────────────────────────
 #
 # These objects are created by Terraform but persist on the cdFMC tenant after
@@ -217,7 +249,7 @@ def _cleanup_objects_by_name(fmc_host, token, object_type, target_names):
 
 
 def cleanup_global_objects(fmc_host, token):
-    print("Step 3: Deleting global FMC network/host objects...")
+    print("Step 4: Deleting global FMC network/host objects...")
     _cleanup_objects_by_name(fmc_host, token, "networks", _NETWORK_OBJECTS | _OSPF_NETWORK_OBJECTS)
     _cleanup_objects_by_name(fmc_host, token, "hosts", _HOST_OBJECTS)
 
@@ -241,7 +273,7 @@ def get_acp_id(fmc_host, token):
 
 
 def delete_acp(fmc_host, token):
-    print(f"Step 4: Deleting Access Control Policy '{ACP_NAME}'...")
+    print(f"Step 5: Deleting Access Control Policy '{ACP_NAME}'...")
     acp_id = get_acp_id(fmc_host, token)
     if not acp_id:
         print("  ACP not found — already clean.")
@@ -289,10 +321,13 @@ def main():
     else:
         print(f"  '{args.device_name}' not found in CDO — already deregistered.")
 
-    # Step 3 — Delete global network/host objects (re-created by Terraform on next deploy)
+    # Step 3 — Delete NAT policy (blocks object deletion if left in place)
+    delete_nat_policy(args.fmc_host, args.token)
+
+    # Step 4 — Delete global network/host objects (re-created by Terraform on next deploy)
     cleanup_global_objects(args.fmc_host, args.token)
 
-    # Step 4 — Delete ACP (re-imported from .sfo on next deploy)
+    # Step 5 — Delete ACP (re-imported from .sfo on next deploy)
     delete_acp(args.fmc_host, args.token)
 
     print("=" * 54)
