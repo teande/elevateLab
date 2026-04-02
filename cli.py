@@ -544,6 +544,27 @@ def reset() -> None:
     CACHE_FILE.unlink(missing_ok=True)
     console.print("    [info]  Deploy cache cleared[/info]")
 
+    # Delete stale Terraform state files.
+    # Sanity checks before deletion:
+    #   1. ROOT_DIR must contain provider.tf and main.tf — confirms we're in the right project
+    #   2. Only delete files matching terraform.tfstate* inside ROOT_DIR (no glob outside)
+    console.print()
+    console.print("  Clearing Terraform state files...")
+    _sanity_markers = [ROOT_DIR / "provider.tf", ROOT_DIR / "main.tf"]
+    if not all(p.exists() for p in _sanity_markers):
+        print_warning(
+            "Skipped state file deletion — project markers (provider.tf, main.tf) "
+            f"not found in {ROOT_DIR}. Refusing to delete state files outside the project."
+        )
+    else:
+        state_files = list(ROOT_DIR.glob("terraform.tfstate*"))
+        if not state_files:
+            console.print("    [info]  No state files found — already clean[/info]")
+        else:
+            for f in state_files:
+                f.unlink()
+                print_success(f"Deleted {f.name}")
+
     print_success("Tenant reset complete")
     console.print()
 
