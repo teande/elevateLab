@@ -61,7 +61,7 @@ resource "fmc_vpn_s2s_endpoints" "endpoints" {
       peer_type                   = "PEER"
       extranet_device             = true
       extranet_dynamic_ip         = false
-      extranet_ip_address         = "44.217.195.188,35.171.214.188"
+      extranet_ip_address         = "35.171.214.188,44.217.195.188"
       connection_type             = "BIDIRECTIONAL"
       allow_incoming_ikev2_routes = true
     }

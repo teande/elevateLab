@@ -248,10 +248,19 @@ def _cleanup_objects_by_name(fmc_host, token, object_type, target_names):
         _delete_fmc_object(fmc_host, token, object_type, obj["id"], obj["name"])
 
 
+_CERT_ENROLLMENT_NAMES = {
+    "pseudoco-device-cert",
+    "Pseudoco Root CA",
+}
+
+
 def cleanup_global_objects(fmc_host, token):
     print("Step 4: Deleting global FMC network/host objects...")
     _cleanup_objects_by_name(fmc_host, token, "networks", _NETWORK_OBJECTS | _OSPF_NETWORK_OBJECTS)
     _cleanup_objects_by_name(fmc_host, token, "hosts", _HOST_OBJECTS)
+
+    print("  Deleting certificate enrollment objects...")
+    _cleanup_objects_by_name(fmc_host, token, "certenrollments", _CERT_ENROLLMENT_NAMES)
 
 
 # ── FMC: ACP deletion ─────────────────────────────────────────────────────────

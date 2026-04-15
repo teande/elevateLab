@@ -7,6 +7,7 @@ CHANGES.md
 .DS_*
 .venv
 __pycache__
+certificates
 
 # Local .terraform directories
 .terraform/

@@ -100,6 +100,18 @@ module "fmc_policies" {
   device_names = var.device_name
 }
 
+# Configure certificate enrollment (runs after devices/policies — global FMC objects)
+module "fmc_certificate_enrollment" {
+  source = "./modules/fmc-certificate-enrollment"
+
+  # depends_on = [module.fmc_policies]
+
+  pkcs12_cert_name  = var.pkcs12_cert_name
+  pkcs12_cert_path  = var.pkcs12_cert_path
+  pkcs12_passphrase = var.pkcs12_passphrase
+  root_ca_cert_path = var.root_ca_cert_path
+}
+
 # Configure OSPF (runs after policies but before BGP and VPN)
 module "fmc_ospf" {
   source = "./modules/fmc-ospf"
