@@ -99,12 +99,12 @@ resource "fmc_device_ipv4_static_route" "route_to_internet" {
   destination_networks = [{
     id = data.fmc_network.any-ipv4.id
   }]
-  gateway_host_object_id = fmc_host.ExtGW.id
+  gateway_host_object_id = fmc_host.ExtGw.id
 
   depends_on = [
     var.devices,
     var.physical_interfaces,
-    fmc_host.ExtGW
+    fmc_host.ExtGw
   ]
 }
 
