@@ -12,10 +12,13 @@ terraform {
 ################################################################################################
 
 # Apps network imported via .sfo — look up as data source
-data "fmc_network" "apps" {
-  name = "Apps"
+# data "fmc_network" "apps" {
+#   name = "Apps"
+# }
+resource "fmc_network" "apps" {
+  name   = "Apps"
+  prefix = "198.18.11.0/24"
 }
-
 resource "fmc_network" "attacker" {
   name        = "Attacker"
   prefix      = "198.18.14.0/24"
