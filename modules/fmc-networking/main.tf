@@ -57,8 +57,8 @@ resource "fmc_network" "Branch-EVPN-Overlay-IOT" {
 ################################################################################################
 # Host Object Resources
 ################################################################################################
-resource "fmc_host" "ExtGW" {
-  name = "ExtGW"
+resource "fmc_host" "ExtGw" {
+  name = "ExtGw"
   ip   = "198.18.3.1"
 }
 
@@ -99,12 +99,12 @@ resource "fmc_device_ipv4_static_route" "route_to_internet" {
   destination_networks = [{
     id = data.fmc_network.any-ipv4.id
   }]
-  gateway_host_object_id = data.fmc_host.ExtGW.id
+  gateway_host_object_id = fmc_host.ExtGW.id
 
   depends_on = [
     var.devices,
     var.physical_interfaces,
-    data.fmc_host.ExtGW
+    fmc_host.ExtGW
   ]
 }
 
