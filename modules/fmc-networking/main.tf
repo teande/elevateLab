@@ -57,6 +57,11 @@ resource "fmc_network" "Branch-EVPN-Overlay-IOT" {
 ################################################################################################
 # Host Object Resources
 ################################################################################################
+resource "fmc_host" "ExtGW" {
+  name = "ExtGW"
+  ip   = "198.18.3.1"
+}
+
 resource "fmc_host" "En-Cat8Kv" {
   name = "En-Cat8Kv"
   ip   = "198.18.8.1"
