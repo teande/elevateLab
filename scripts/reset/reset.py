@@ -66,7 +66,10 @@ def delete_vpn_topology(fmc_host, token, topology_id, name):
         if resp.status_code in (200, 204):
             print(f"  Deleted: {name}")
         else:
-            print(f"  WARNING: {name} returned {resp.status_code}: {resp.text}", file=sys.stderr)
+            print(
+                f"  WARNING: {name} returned {resp.status_code}: {resp.text}",
+                file=sys.stderr,
+            )
     except requests.exceptions.RequestException as e:
         print(f"  ERROR: Could not delete {name}: {e}", file=sys.stderr)
 
@@ -128,7 +131,10 @@ def deregister_cdo_device(api_base, token, device_uid):
     try:
         resp = requests.post(url, headers=cdo_headers(token), verify=False)
         if resp.status_code not in (200, 202, 204):
-            print(f"ERROR: Deregistration returned {resp.status_code}: {resp.text}", file=sys.stderr)
+            print(
+                f"ERROR: Deregistration returned {resp.status_code}: {resp.text}",
+                file=sys.stderr,
+            )
             sys.exit(1)
     except requests.exceptions.RequestException as e:
         print(f"ERROR: Deregistration call failed: {e}", file=sys.stderr)
@@ -146,7 +152,10 @@ def poll_until_gone(api_base, token, device_name):
         print(f"  Still present at {elapsed}s...")
         time.sleep(POLL_INTERVAL_SEC)
         elapsed += POLL_INTERVAL_SEC
-    print(f"ERROR: Device still present after {POLL_TIMEOUT_SEC}s. Aborting.", file=sys.stderr)
+    print(
+        f"ERROR: Device still present after {POLL_TIMEOUT_SEC}s. Aborting.",
+        file=sys.stderr,
+    )
     sys.exit(1)
 
 
@@ -175,7 +184,10 @@ def delete_nat_policy(fmc_host, token):
         if resp.status_code in (200, 204):
             print(f"  Deleted: {NAT_POLICY_NAME}")
         else:
-            print(f"  WARNING: NAT delete returned {resp.status_code}: {resp.text}", file=sys.stderr)
+            print(
+                f"  WARNING: NAT delete returned {resp.status_code}: {resp.text}",
+                file=sys.stderr,
+            )
     except requests.exceptions.RequestException as e:
         print(f"  WARNING: Could not delete NAT policy: {e}", file=sys.stderr)
 
@@ -194,7 +206,6 @@ _NETWORK_OBJECTS = {
     "Branch-EVPN-Overlay-IOT",
 }
 _HOST_OBJECTS = {
-    "ExtGW",
     "En-Cat8Kv",
     "BRANCH-SITE-105-ROUTER",
     "HQ-SITE10-CEDGE8Kv",
@@ -233,7 +244,10 @@ def _delete_fmc_object(fmc_host, token, object_type, obj_id, name):
         if resp.status_code in (200, 204):
             print(f"  Deleted: {name}")
         else:
-            print(f"  WARNING: {name} returned {resp.status_code}: {resp.text}", file=sys.stderr)
+            print(
+                f"  WARNING: {name} returned {resp.status_code}: {resp.text}",
+                file=sys.stderr,
+            )
     except requests.exceptions.RequestException as e:
         print(f"  WARNING: Could not delete {name}: {e}", file=sys.stderr)
 
@@ -250,17 +264,25 @@ def _cleanup_objects_by_name(fmc_host, token, object_type, target_names):
 
 _CERT_ENROLLMENT_NAMES = {
     "pseudoco-device-cert",
-    "Pseudoco Root CA",
+    "Pseudoco_Root_CA",
+}
+_TRUSTED_CA_NAMES = {
+    "trusted_pseudoco_root_ca",
 }
 
 
 def cleanup_global_objects(fmc_host, token):
     print("Step 4: Deleting global FMC network/host objects...")
-    _cleanup_objects_by_name(fmc_host, token, "networks", _NETWORK_OBJECTS | _OSPF_NETWORK_OBJECTS)
+    _cleanup_objects_by_name(
+        fmc_host, token, "networks", _NETWORK_OBJECTS | _OSPF_NETWORK_OBJECTS
+    )
     _cleanup_objects_by_name(fmc_host, token, "hosts", _HOST_OBJECTS)
 
     print("  Deleting certificate enrollment objects...")
     _cleanup_objects_by_name(fmc_host, token, "certenrollments", _CERT_ENROLLMENT_NAMES)
+
+    print("  Deleting trusted CA objects...")
+    _cleanup_objects_by_name(fmc_host, token, "externalcacertificates", _TRUSTED_CA_NAMES)
 
 
 # ── FMC: ACP deletion ─────────────────────────────────────────────────────────
@@ -293,7 +315,10 @@ def delete_acp(fmc_host, token):
         if resp.status_code in (200, 204):
             print(f"  Deleted: {ACP_NAME}")
         else:
-            print(f"  WARNING: ACP delete returned {resp.status_code}: {resp.text}", file=sys.stderr)
+            print(
+                f"  WARNING: ACP delete returned {resp.status_code}: {resp.text}",
+                file=sys.stderr,
+            )
     except requests.exceptions.RequestException as e:
         print(f"  ERROR: Could not delete ACP: {e}", file=sys.stderr)
 
@@ -305,10 +330,18 @@ def main():
     parser = argparse.ArgumentParser(
         description="Reset cdFMC/SCC tenant between student lab sessions."
     )
-    parser.add_argument("--scc-host", required=True, help="SCC base URL (e.g. https://us.manage.security.cisco.com)")
-    parser.add_argument("--fmc-host", required=True, help="cdFMC hostname (no https://)")
-    parser.add_argument("--token",    required=True, help="SCC/CDO API token")
-    parser.add_argument("--device-name", required=True, help="FTD device name to deregister")
+    parser.add_argument(
+        "--scc-host",
+        required=True,
+        help="SCC base URL (e.g. https://us.manage.security.cisco.com)",
+    )
+    parser.add_argument(
+        "--fmc-host", required=True, help="cdFMC hostname (no https://)"
+    )
+    parser.add_argument("--token", required=True, help="SCC/CDO API token")
+    parser.add_argument(
+        "--device-name", required=True, help="FTD device name to deregister"
+    )
     args = parser.parse_args()
 
     print("=" * 54)

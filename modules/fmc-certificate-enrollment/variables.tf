@@ -1,7 +1,7 @@
 variable "pkcs12_cert_name" {
   type        = string
   description = "Name for the PKCS12 certificate enrollment object in FMC"
-  default     = "Pseudoco_Device_Cert_pkcs12"
+  default     = "pseudoco-device-cert"
 }
 
 variable "pkcs12_cert_path" {
