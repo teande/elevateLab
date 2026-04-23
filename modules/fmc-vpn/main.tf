@@ -82,7 +82,7 @@ resource "fmc_vpn_s2s_endpoints" "endpoints" {
 
   items = {
     # Node A - Extranet SecureAccess cloud device
-    nodeA = {
+    SecureAccess = {
       peer_type                   = "PEER"
       extranet_device             = true
       extranet_dynamic_ip         = false
@@ -92,7 +92,7 @@ resource "fmc_vpn_s2s_endpoints" "endpoints" {
     }
 
     # Node B - Internal FTD device
-    nodeB = {
+    hqftdv = {
       peer_type                    = "PEER"
       extranet_device              = false
       device_id                    = var.devices[0].id
