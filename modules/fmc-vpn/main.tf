@@ -8,6 +8,17 @@ terraform {
 }
 
 ################################################################################################
+# IKEv2 Policy & Proposal Data Sources (pre-existing "umbrella" objects on FMC)
+################################################################################################
+data "fmc_ikev2_policy" "umbrella" {
+  name = "Umbrella-AES-GCM-256"
+}
+
+data "fmc_ikev2_ipsec_proposal" "umbrella" {
+  name = "Umbrella-AES-GCM-256"
+}
+
+################################################################################################
 # VPN Site-to-Site Tunnels
 ################################################################################################
 
@@ -29,6 +40,35 @@ resource "fmc_vpn_s2s_ike_settings" "ike_settings" {
   ikev2_authentication_type              = "MANUAL_PRE_SHARED_KEY"
   ikev2_manual_pre_shared_key            = "Cisco111111111111111111"
   ikev2_enforce_hex_based_pre_shared_key = false
+  ikev2_policies = [{
+    id   = data.fmc_ikev2_policy.umbrella.id
+    name = data.fmc_ikev2_policy.umbrella.name
+  }]
+
+  depends_on = [fmc_vpn_s2s.secure_access]
+}
+
+################################################################################################
+# IPsec Settings
+################################################################################################
+
+resource "fmc_vpn_s2s_ipsec_settings" "ipsec_settings" {
+  vpn_s2s_id = fmc_vpn_s2s.secure_access.id
+  ikev2_ipsec_proposals = [{
+    id   = data.fmc_ikev2_ipsec_proposal.umbrella.id
+    name = data.fmc_ikev2_ipsec_proposal.umbrella.name
+  }]
+
+  depends_on = [fmc_vpn_s2s.secure_access]
+}
+
+################################################################################################
+# Advanced Settings
+################################################################################################
+
+resource "fmc_vpn_s2s_advanced_settings" "advanced" {
+  vpn_s2s_id                   = fmc_vpn_s2s.secure_access.id
+  ike_peer_identity_validation = "DO_NOT_CHECK"
 
   depends_on = [fmc_vpn_s2s.secure_access]
 }
@@ -41,8 +81,18 @@ resource "fmc_vpn_s2s_endpoints" "endpoints" {
   vpn_s2s_id = fmc_vpn_s2s.secure_access.id
 
   items = {
-    # Node A - Internal FTD device
-    internal_node = {
+    # Node A - Extranet SecureAccess cloud device
+    nodeA = {
+      peer_type                   = "PEER"
+      extranet_device             = true
+      extranet_dynamic_ip         = false
+      extranet_ip_address         = "35.171.214.188,44.217.195.188"
+      connection_type             = "BIDIRECTIONAL"
+      allow_incoming_ikev2_routes = true
+    }
+
+    # Node B - Internal FTD device
+    nodeB = {
       peer_type                    = "PEER"
       extranet_device              = false
       device_id                    = var.devices[0].id
@@ -55,21 +105,13 @@ resource "fmc_vpn_s2s_endpoints" "endpoints" {
       connection_type              = "BIDIRECTIONAL"
       allow_incoming_ikev2_routes  = true
     }
-
-    # Node B - Extranet SecureAccess cloud device
-    SecureAccess = {
-      peer_type                   = "PEER"
-      extranet_device             = true
-      extranet_dynamic_ip         = false
-      extranet_ip_address         = "35.171.214.188,44.217.195.188"
-      connection_type             = "BIDIRECTIONAL"
-      allow_incoming_ikev2_routes = true
-    }
   }
 
   depends_on = [
     fmc_vpn_s2s.secure_access,
     fmc_vpn_s2s_ike_settings.ike_settings,
+    fmc_vpn_s2s_ipsec_settings.ipsec_settings,
+    fmc_vpn_s2s_advanced_settings.advanced,
     var.devices,
     var.vti_interfaces
   ]
